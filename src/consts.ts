@@ -24,8 +24,8 @@ export const SITE = {
 /** Links das suas redes — deixe a string vazia ('') para esconder o ícone */
 export const SOCIALS = {
   github: 'https://github.com/pedromendes-dev',
-  linkedin: 'https://www.linkedin.com/in/pedromendes-dev',
-  email: 'pedroeliasxexeu@gmail.com',
+  linkedin: 'https://linkedin.com/in/pedro-mendes',
+  email: 'pedromendes211205@gmail.com',
   twitter: '', // ex.: 'https://x.com/seu_user'
 } as const;
 
