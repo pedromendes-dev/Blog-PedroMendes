@@ -1,0 +1,27 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { href } from '@/utils';
+---
+<BaseLayout title="404 — Página não encontrada">
+  <section class="nf">
+    <p class="code mono">404</p>
+    <h1>Esta rota não existe.</h1>
+    <p class="sub">O endereço pode ter mudado ou nunca ter existido. Volte para um lugar conhecido.</p>
+    <div class="cta">
+      <a href={href('/')} class="btn">Início</a>
+      <a href={href('/blog')} class="btn ghost">Ver o blog <Icon name="arrow" size={15} /></a>
+    </div>
+  </section>
+
+  <style>
+    .nf { text-align: center; padding: 7rem 0; max-width: 40ch; margin: 0 auto; }
+    .code { font-size: 5rem; color: var(--accent); font-weight: 500; line-height: 1; }
+    h1 { font-size: 2rem; margin: 1rem 0 0.8rem; }
+    .sub { color: var(--text-dim); }
+    .cta { display: flex; gap: 0.8rem; justify-content: center; margin-top: 2rem; }
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.7rem 1.3rem; border-radius: 10px; background: var(--accent); color: #fff; }
+    .btn.ghost { background: none; border: 1px solid var(--border); color: var(--text); }
+    .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</BaseLayout>

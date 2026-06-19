@@ -1,0 +1,55 @@
+---
+import { SITE, SOCIALS } from '@/consts';
+import { href } from '@/utils';
+import Icon from './Icon.astro';
+import Signature from './Signature.astro';
+
+const year = new Date().getFullYear();
+const socialList = [
+  { name: 'github', url: SOCIALS.github, label: 'GitHub' },
+  { name: 'linkedin', url: SOCIALS.linkedin, label: 'LinkedIn' },
+  { name: 'twitter', url: SOCIALS.twitter, label: 'Twitter / X' },
+  { name: 'email', url: SOCIALS.email ? `mailto:${SOCIALS.email}` : '', label: 'E-mail' },
+].filter((s) => s.url);
+---
+<footer class="ft">
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <Signature size={2.4} />
+        <p class="tag">{SITE.role} · {SITE.location}</p>
+      </div>
+      <div class="links">
+        {socialList.map((s) => (
+          <a href={s.url} aria-label={s.label} target="_blank" rel="noopener noreferrer">
+            <Icon name={s.name as any} size={20} />
+          </a>
+        ))}
+        <a href={href('/rss.xml')} aria-label="RSS"><Icon name="rss" size={20} /></a>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>© {year} {SITE.author}</span>
+      <span class="mono">Feito com Astro · hospedado no GitHub Pages</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .ft { border-top: 1px solid var(--border); margin-top: 5rem; background: var(--surface); }
+  .wrap { max-width: 72rem; margin: 0 auto; padding: 2.5rem 1.5rem 2rem; }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1.5rem; }
+  .tag { color: var(--text-dim); font-size: 0.9rem; margin-top: 0.3rem; }
+  .links { display: flex; gap: 0.4rem; }
+  .links a {
+    display: grid; place-items: center; width: 40px; height: 40px;
+    border-radius: 9px; color: var(--text-dim); transition: color 0.15s, background 0.15s;
+  }
+  .links a:hover { color: var(--accent); background: var(--surface-2); }
+  .bottom {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+    color: var(--text-dim); font-size: 0.85rem;
+  }
+  .mono { font-family: var(--font-mono); font-size: 0.75rem; }
+</style>

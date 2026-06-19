@@ -1,0 +1,28 @@
+---
+import { SITE } from '@/consts';
+interface Props { size?: number; }
+const { size = 2.6 } = Astro.props;
+---
+<!--
+  ASSINATURA. Hoje renderiza seu nome em fonte manuscrita (placeholder).
+  Para usar SUA assinatura real:
+    1. Salve a imagem em public/signature.svg (ou .png, fundo transparente)
+    2. Comente o <span> abaixo e descomente o <img>
+-->
+<span class="sig" style={`font-size:${size}rem`}>{SITE.author}</span>
+<!--
+<img src={import.meta.env.BASE_URL.replace(/\/$/,'') + '/signature.svg'} alt={SITE.author} class="sig-img" />
+-->
+
+<style>
+  .sig {
+    font-family: 'Caveat', cursive;
+    color: var(--text);
+    line-height: 1;
+    display: inline-block;
+  }
+  .sig-img { height: 3rem; width: auto; }
+  :global(.light) .sig-img { filter: none; }
+  /* No tema escuro, se sua assinatura for preta, descomente para clarear: */
+  /* .sig-img { filter: invert(1); } */
+</style>

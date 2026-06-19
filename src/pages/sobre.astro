@@ -1,0 +1,104 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Signature from '@/components/Signature.astro';
+import Icon from '@/components/Icon.astro';
+import { SITE, SOCIALS } from '@/consts';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+// Edite livremente seu histórico
+const timeline = [
+  { year: '2026', text: 'Full Stack Developer na Opus127, trabalhando com .NET, Node.js e React.' },
+  { year: '2025', text: 'Aprofundamento em arquitetura: DDD, Clean Architecture, design patterns e micro frontends.' },
+  { year: 'Hoje', text: '7º semestre de Ciência da Computação no Centro Universitário UNA, em Belo Horizonte.' },
+];
+
+const skills = [
+  { area: 'Backend', items: ['C# / .NET', 'Node.js', 'SQL Server', 'APIs REST'] },
+  { area: 'Frontend', items: ['React', 'TypeScript', 'Micro Frontends', 'Vite / Webpack'] },
+  { area: 'Arquitetura', items: ['DDD', 'Clean Architecture', 'SOLID', 'Design Patterns'] },
+  { area: 'Infra', items: ['Docker', 'Linux', 'Kubernetes', 'CI/CD'] },
+];
+
+const socialList = [
+  { name: 'github', url: SOCIALS.github, label: 'GitHub' },
+  { name: 'linkedin', url: SOCIALS.linkedin, label: 'LinkedIn' },
+  { name: 'email', url: SOCIALS.email ? `mailto:${SOCIALS.email}` : '', label: 'E-mail' },
+].filter((s) => s.url);
+---
+<BaseLayout title="Sobre" description={`Quem é ${SITE.author} — ${SITE.role}.`}>
+  <section class="intro rise">
+    <img src={`${base}/avatar.svg`} alt={SITE.author} class="photo" width="160" height="160" />
+    <div>
+      <p class="eyebrow">{SITE.role} · {SITE.location}</p>
+      <h1>Sobre mim</h1>
+      <p class="bio">
+        Sou {SITE.author}, desenvolvedor full stack apaixonado por construir software bem
+        arquitetado e fácil de manter. Escrevo aqui sobre as decisões técnicas do dia a dia —
+        de padrões de projeto a infraestrutura. <em>(Edite este texto em <code>src/pages/sobre.astro</code>.)</em>
+      </p>
+      <div class="links">
+        {socialList.map((s) => (
+          <a href={s.url} target="_blank" rel="noopener noreferrer" class="link">
+            <Icon name={s.name as any} size={18} /> {s.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>O que eu uso</h2>
+    <div class="skills">
+      {skills.map((s) => (
+        <div class="skill">
+          <p class="eyebrow">{s.area}</p>
+          <ul>{s.items.map((i) => <li class="mono">{i}</li>)}</ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Trajetória</h2>
+    <ol class="timeline">
+      {timeline.map((t) => (
+        <li>
+          <span class="yr mono">{t.year}</span>
+          <span class="tx">{t.text}</span>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="sign">
+    <Signature size={3} />
+  </section>
+
+  <style>
+    .intro { display: flex; gap: 2rem; align-items: center; padding: 3rem 0 2rem; }
+    .photo { width: 160px; height: 160px; border-radius: 20px; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+    h1 { font-size: 2.6rem; margin: 0.6rem 0 1rem; }
+    .bio { color: var(--text-dim); font-size: 1.1rem; line-height: 1.7; max-width: 55ch; }
+    .links { display: flex; gap: 1.2rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.92rem; }
+
+    .block { padding: 2rem 0; border-top: 1px solid var(--border); }
+    .block h2 { font-size: 1.6rem; margin-bottom: 1.5rem; }
+    .skills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+    .skill ul { list-style: none; padding: 0; margin-top: 0.8rem; }
+    .skill li { font-size: 0.85rem; color: var(--text-dim); padding: 0.25rem 0; }
+
+    .timeline { list-style: none; padding: 0; }
+    .timeline li { display: flex; gap: 1.5rem; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+    .yr { color: var(--accent); font-size: 0.85rem; min-width: 4rem; padding-top: 0.15rem; }
+    .tx { color: var(--text); }
+
+    .sign { padding: 3rem 0 1rem; opacity: 0.8; }
+
+    @media (max-width: 760px) {
+      .intro { flex-direction: column; align-items: flex-start; }
+      .skills { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</BaseLayout>

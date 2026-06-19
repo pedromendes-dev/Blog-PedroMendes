@@ -1,0 +1,72 @@
+---
+title: 'Docker do zero ao deploy: o mínimo que todo dev precisa'
+description: 'Containerizar uma API .NET sem decorar comando — entendendo o que cada linha faz.'
+pubDate: 2026-05-28
+tags: ['docker', 'infra', 'dotnet']
+---
+
+Docker assusta no começo porque parece mágica. Não é. É só um jeito de empacotar
+sua aplicação com tudo que ela precisa para rodar igual em qualquer lugar.
+
+## O Dockerfile, linha por linha
+
+```dockerfile
+# Etapa 1: build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY *.csproj .
+RUN dotnet restore
+COPY . .
+RUN dotnet publish -c Release -o /app
+
+# Etapa 2: runtime (imagem menor, só o necessário)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app .
+ENTRYPOINT ["dotnet", "MinhaApi.dll"]
+```
+
+O segredo está no **multi-stage build**: a primeira etapa tem o SDK pesado para
+compilar; a segunda copia só o resultado para uma imagem enxuta. Sua imagem
+final fica pequena e sem ferramentas de build sobrando.
+
+## Subindo tudo com Compose
+
+Para uma API com banco, `docker-compose.yml` resolve:
+
+```yaml
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+Um `docker compose up` e você tem API + banco conversando, com os dados
+persistindo no volume mesmo se o container reiniciar.
+
+## O erro clássico
+
+Esquecer o `.dockerignore`. Sem ele, o `COPY . .` arrasta `bin/`, `obj/` e
+`node_modules` para dentro da imagem, deixando o build lento e a imagem inchada:
+
+```
+bin/
+obj/
+node_modules/
+.git/
+```
+
+Containerizar bem é menos sobre decorar comandos e mais sobre entender o que
+está sendo empacotado.

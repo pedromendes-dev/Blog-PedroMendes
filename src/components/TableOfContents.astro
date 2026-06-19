@@ -1,0 +1,49 @@
+---
+interface Heading { depth: number; slug: string; text: string; }
+interface Props { headings: Heading[]; }
+const { headings } = Astro.props;
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+{items.length > 0 && (
+  <nav class="toc" aria-label="Índice do artigo">
+    <p class="eyebrow">Neste artigo</p>
+    <ul>
+      {items.map((h) => (
+        <li class:list={[`d${h.depth}`]}>
+          <a href={`#${h.slug}`} data-slug={h.slug}>{h.text}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<style>
+  .toc { position: sticky; top: 6rem; font-size: 0.88rem; }
+  .toc p { margin-bottom: 0.8rem; }
+  .toc ul { list-style: none; padding: 0; border-left: 1px solid var(--border); }
+  .toc li a {
+    display: block; padding: 0.35rem 0 0.35rem 1rem; color: var(--text-dim);
+    border-left: 2px solid transparent; margin-left: -1px; transition: color 0.15s, border-color 0.15s;
+  }
+  .toc li a:hover { color: var(--text); }
+  .toc li a.active { color: var(--accent); border-left-color: var(--accent); }
+  .toc .d3 a { padding-left: 1.8rem; font-size: 0.83rem; }
+</style>
+
+<script>
+  const links = document.querySelectorAll<HTMLAnchorElement>('.toc a');
+  const map = new Map<string, HTMLAnchorElement>();
+  links.forEach((l) => map.set(l.dataset.slug!, l));
+  const obs = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          links.forEach((l) => l.classList.remove('active'));
+          map.get(e.target.id)?.classList.add('active');
+        }
+      });
+    },
+    { rootMargin: '-10% 0px -80% 0px' }
+  );
+  document.querySelectorAll('.prose h2, .prose h3').forEach((h) => obs.observe(h));
+</script>
