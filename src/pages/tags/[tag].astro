@@ -1,0 +1,54 @@
+---
+import { getCollection } from 'astro:content';
+import readingTime from 'reading-time';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import PostCard from '@/components/PostCard.astro';
+import Icon from '@/components/Icon.astro';
+import { href } from '@/utils';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const tags = [...new Set(posts.flatMap((p) => p.data.tags))];
+  return tags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      posts: posts
+        .filter((p) => p.data.tags.includes(tag))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+const minutesOf = (body: string) => Math.max(1, Math.round(readingTime(body ?? '').minutes));
+---
+<BaseLayout title={`#${tag}`} description={`Artigos sobre ${tag}.`}>
+  <section class="top">
+    <a href={href('/tags')} class="back mono"><Icon name="arrow" size={14} /> todas as tags</a>
+    <p class="eyebrow">{posts.length} artigo{posts.length === 1 ? '' : 's'}</p>
+    <h1>#{tag}</h1>
+  </section>
+  <section class="grid">
+    {posts.map((p) => (
+      <PostCard
+        id={p.id}
+        title={p.data.title}
+        description={p.data.description}
+        pubDate={p.data.pubDate}
+        tags={p.data.tags}
+        minutes={minutesOf(p.body ?? '')}
+      />
+    ))}
+  </section>
+
+  <style>
+    .top { padding: 3rem 0 1.5rem; }
+    .back { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-dim); font-size: 0.8rem; }
+    .back:hover { color: var(--accent); }
+    .back :global(svg) { transform: rotate(180deg); }
+    h1 { font-size: 2.6rem; margin: 0.6rem 0; color: var(--warm); }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.3rem; padding: 1rem 0 2rem; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</BaseLayout>

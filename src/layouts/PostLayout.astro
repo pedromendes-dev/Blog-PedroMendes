@@ -1,0 +1,77 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+import TableOfContents from '@/components/TableOfContents.astro';
+import Giscus from '@/components/Giscus.astro';
+import Icon from '@/components/Icon.astro';
+import { href, formatDate } from '@/utils';
+import { Image } from 'astro:assets';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+  minutes: number;
+  headings: { depth: number; slug: string; text: string }[];
+}
+const { post, minutes, headings } = Astro.props;
+const { title, description, pubDate, updatedDate, tags, cover, coverAlt } = post.data;
+---
+<BaseLayout title={title} description={description} image="/og-default.png" article publishedTime={pubDate}>
+  <article class="post">
+    <header class="head">
+      <a href={href('/blog')} class="back mono"><Icon name="arrow" size={14} /> voltar ao blog</a>
+      <div class="meta mono">
+        <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+        <span class="dot">·</span>
+        <span class="rt"><Icon name="clock" size={13} /> {minutes} min de leitura</span>
+        {updatedDate && <span class="dot">·</span>}
+        {updatedDate && <span>atualizado {formatDate(updatedDate)}</span>}
+      </div>
+      <h1>{title}</h1>
+      <p class="lead">{description}</p>
+      <div class="tags">
+        {tags.map((t) => (
+          <a href={href(`/tags/${t}`)} class="tg mono">#{t}</a>
+        ))}
+      </div>
+      {cover && (
+        <div class="cover">
+          <Image src={cover} alt={coverAlt ?? title} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 800px" />
+        </div>
+      )}
+    </header>
+
+    <div class="grid">
+      <div class="prose">
+        <slot />
+      </div>
+      <aside class="side">
+        <TableOfContents headings={headings} />
+      </aside>
+    </div>
+
+    <Giscus />
+  </article>
+
+  <style>
+    .post { padding: 2.5rem 0; }
+    .back { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--text-dim); font-size: 0.8rem; }
+    .back:hover { color: var(--accent); }
+    .back :global(svg) { transform: rotate(180deg); }
+    .head { max-width: 70ch; }
+    .meta { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text-dim); margin: 1.2rem 0; flex-wrap: wrap; }
+    .dot { opacity: 0.5; }
+    .rt { display: inline-flex; align-items: center; gap: 0.25rem; }
+    h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 0.8rem; }
+    .lead { font-size: 1.2rem; color: var(--text-dim); line-height: 1.6; }
+    .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }
+    .tg { font-size: 0.78rem; color: var(--warm); padding: 0.2rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
+    .tg:hover { border-color: var(--warm); }
+    .cover { margin-top: 2rem; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+    .cover :global(img) { width: 100%; height: auto; display: block; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 16rem; gap: 3rem; margin-top: 2.5rem; align-items: start; }
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: 1fr; }
+      .side { display: none; }
+    }
+  </style>
+</BaseLayout>

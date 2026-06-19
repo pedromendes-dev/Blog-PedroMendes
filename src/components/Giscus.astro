@@ -1,0 +1,34 @@
+---
+import { GISCUS } from '@/consts';
+---
+{GISCUS.enabled && (
+  <section class="comments">
+    <p class="eyebrow">Comentários</p>
+    <div id="giscus-root"></div>
+  </section>
+)}
+
+{GISCUS.enabled && (
+  <script is:inline define:vars={{ GISCUS }}>
+    (() => {
+      const s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', GISCUS.repo);
+      s.setAttribute('data-repo-id', GISCUS.repoId);
+      s.setAttribute('data-category', GISCUS.category);
+      s.setAttribute('data-category-id', GISCUS.categoryId);
+      s.setAttribute('data-mapping', 'pathname');
+      s.setAttribute('data-reactions-enabled', '1');
+      s.setAttribute('data-theme', document.documentElement.classList.contains('light') ? 'light' : 'dark_dimmed');
+      s.setAttribute('data-lang', 'pt');
+      s.crossOrigin = 'anonymous';
+      s.async = true;
+      document.getElementById('giscus-root')?.appendChild(s);
+    })();
+  </script>
+)}
+
+<style>
+  .comments { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+  .comments p { margin-bottom: 1rem; }
+</style>

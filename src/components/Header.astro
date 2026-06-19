@@ -1,0 +1,90 @@
+---
+import { NAV, SITE } from '@/consts';
+import { href } from '@/utils';
+import ThemeToggle from './ThemeToggle.astro';
+import Icon from './Icon.astro';
+
+const current = Astro.url.pathname.replace(/\/$/, '');
+const isActive = (link: string) => {
+  const target = href(link).replace(/\/$/, '');
+  if (link === '/') return current === target;
+  return current === target || current.startsWith(target + '/');
+};
+---
+<header class="hd">
+  <div class="wrap">
+    <a href={href('/')} class="brand" aria-label={`${SITE.author} — início`}>
+      <span class="mono">{SITE.author.split(' ').map((w) => w[0]).join('')}</span>
+      <span class="name">{SITE.author}</span>
+    </a>
+
+    <nav class="nav" aria-label="Principal">
+      {NAV.map((item) => (
+        <a href={href(item.href)} class:list={['link', { on: isActive(item.href) }]}>
+          {item.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="actions">
+      <ThemeToggle />
+      <button id="nav-open" class="burger" aria-label="Abrir menu"><Icon name="menu" /></button>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="mobile" hidden>
+    {NAV.map((item) => (
+      <a href={href(item.href)} class:list={['mlink', { on: isActive(item.href) }]}>{item.label}</a>
+    ))}
+  </div>
+</header>
+
+<style>
+  .hd {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .wrap {
+    max-width: 72rem; margin: 0 auto; padding: 0.85rem 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.6rem; color: var(--text); }
+  .brand:hover { color: var(--text); }
+  .mono {
+    font-family: var(--font-mono); font-weight: 500; font-size: 0.85rem;
+    border: 1px solid var(--accent); color: var(--accent);
+    padding: 0.2rem 0.45rem; border-radius: 7px; letter-spacing: 0.02em;
+  }
+  .name { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
+  .nav { display: flex; gap: 0.4rem; margin-left: auto; }
+  .link {
+    font-size: 0.95rem; color: var(--text-dim); padding: 0.4rem 0.7rem;
+    border-radius: 8px; transition: color 0.15s, background 0.15s;
+  }
+  .link:hover { color: var(--text); background: var(--surface); }
+  .link.on { color: var(--accent); }
+  .actions { display: flex; align-items: center; gap: 0.6rem; }
+  .burger {
+    display: none; background: none; border: none; color: var(--text-dim); cursor: pointer;
+    width: 38px; height: 38px; place-items: center; border-radius: 9px;
+  }
+  .burger:hover { color: var(--accent); }
+  .mobile { display: none; flex-direction: column; padding: 0.5rem 1.5rem 1rem; border-top: 1px solid var(--border); }
+  .mlink { padding: 0.7rem 0; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+  .mlink.on { color: var(--accent); }
+
+  @media (max-width: 680px) {
+    .nav { display: none; }
+    .burger { display: grid; }
+    .name { display: none; }
+    .mobile:not([hidden]) { display: flex; }
+  }
+</style>
+
+<script>
+  const open = document.getElementById('nav-open');
+  const menu = document.getElementById('mobile-menu');
+  open?.addEventListener('click', () => menu?.toggleAttribute('hidden'));
+</script>

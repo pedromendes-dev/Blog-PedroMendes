@@ -1,0 +1,52 @@
+---
+import { href, formatDate } from '@/utils';
+import Icon from './Icon.astro';
+
+interface Props {
+  id: string;
+  title: string;
+  description: string;
+  pubDate: Date;
+  tags: string[];
+  minutes: number;
+  featured?: boolean;
+}
+const { id, title, description, pubDate, tags, minutes, featured = false } = Astro.props;
+---
+<article class:list={['card', { feat: featured }]}>
+  <a href={href(`/blog/${id}`)} class="cover-link" aria-label={title}>
+    <div class="meta mono">
+      <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+      <span class="dot">·</span>
+      <span class="rt"><Icon name="clock" size={13} /> {minutes} min</span>
+    </div>
+    <h3>{title}</h3>
+    <p class="desc">{description}</p>
+    <div class="foot">
+      <div class="tags">
+        {tags.slice(0, 3).map((t) => <span class="tg mono">#{t}</span>)}
+      </div>
+      <span class="read">Ler <Icon name="arrow" size={15} /></span>
+    </div>
+  </a>
+</article>
+
+<style>
+  .card {
+    border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+    transition: border-color 0.2s, transform 0.2s; overflow: hidden;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .cover-link { display: block; padding: 1.5rem; color: var(--text); height: 100%; }
+  .cover-link:hover { color: var(--text); }
+  .meta { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--text-dim); }
+  .dot { opacity: 0.5; }
+  .rt { display: inline-flex; align-items: center; gap: 0.25rem; }
+  h3 { font-size: 1.3rem; margin: 0.7rem 0 0.5rem; }
+  .feat h3 { font-size: 1.7rem; }
+  .desc { color: var(--text-dim); font-size: 0.95rem; line-height: 1.6; }
+  .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 1.2rem; gap: 1rem; }
+  .tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .tg { font-size: 0.72rem; color: var(--warm); }
+  .read { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--accent); font-size: 0.85rem; white-space: nowrap; }
+</style>

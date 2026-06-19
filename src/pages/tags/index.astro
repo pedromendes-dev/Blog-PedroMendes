@@ -1,0 +1,43 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { href } from '@/utils';
+
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+const counts = new Map<string, number>();
+for (const p of posts) for (const t of p.data.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+---
+<BaseLayout title="Tags" description="Navegue os artigos por assunto.">
+  <section class="top">
+    <p class="eyebrow">{tags.length} assunto{tags.length === 1 ? '' : 's'}</p>
+    <h1>Tags</h1>
+    <p class="sub">Explore os artigos por tema.</p>
+  </section>
+  <section class="cloud">
+    {tags.length === 0 ? (
+      <p class="empty">Nenhuma tag ainda.</p>
+    ) : (
+      tags.map(([tag, n]) => (
+        <a href={href(`/tags/${tag}`)} class="tg mono">
+          #{tag} <span class="n">{n}</span>
+        </a>
+      ))
+    )}
+  </section>
+
+  <style>
+    .top { padding: 3rem 0 1.5rem; }
+    h1 { font-size: 2.6rem; margin: 0.8rem 0 0.6rem; }
+    .sub { color: var(--text-dim); font-size: 1.1rem; }
+    .cloud { display: flex; flex-wrap: wrap; gap: 0.8rem; padding: 1rem 0 2rem; }
+    .tg {
+      display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.95rem;
+      padding: 0.6rem 1rem; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--warm); transition: border-color 0.15s, transform 0.15s;
+    }
+    .tg:hover { border-color: var(--warm); transform: translateY(-2px); }
+    .n { color: var(--text-dim); font-size: 0.8rem; background: var(--surface-2); padding: 0.1rem 0.4rem; border-radius: 5px; }
+    .empty { color: var(--text-dim); }
+  </style>
+</BaseLayout>

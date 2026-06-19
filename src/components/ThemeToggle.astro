@@ -1,0 +1,36 @@
+---
+import Icon from './Icon.astro';
+---
+<button id="theme-toggle" type="button" aria-label="Alternar tema claro/escuro" class="toggle">
+  <span class="ic ic-moon"><Icon name="moon" size={18} /></span>
+  <span class="ic ic-sun"><Icon name="sun" size={18} /></span>
+</button>
+
+<style>
+  .toggle {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .toggle:hover { color: var(--accent); border-color: var(--accent); }
+  .ic { grid-area: 1 / 1; display: grid; place-items: center; }
+  .ic-sun { display: none; }
+  :global(.light) .ic-moon { display: none; }
+  :global(.light) .ic-sun { display: grid; }
+</style>
+
+<script>
+  const btn = document.getElementById('theme-toggle');
+  btn?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const isLight = root.classList.toggle('light');
+    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  });
+</script>
