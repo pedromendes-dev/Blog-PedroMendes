@@ -3,31 +3,31 @@
 /* ───────────────────────── TOKENS DE COR ─────────────────────────
    Padrão = tema escuro (grafite frio). .light sobrescreve.            */
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface-2: #1b222c;
-  --border: #2a313c;
-  --text: #e6edf3;
-  --text-dim: #9aa6b2;
-  --accent: #5b8def;       /* azul-aço (primário) */
-  --accent-strong: #7aa2ff;
-  --warm: #e0a458;         /* âmbar (contraponto quente) */
-  --code-bg: #0a0d12;
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --bg: #0a0e17;
+  --surface: #111827;
+  --surface-2: #1a2235;
+  --border: #1e2d45;
+  --text: #e8edf5;
+  --text-dim: #8896aa;
+  --accent: #4f8ef7;
+  --accent-strong: #7aaeff;
+  --warm: #f0a84a;
+  --code-bg: #080c14;
+  --shadow: 0 1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.5);
 }
 
 :root.light {
-  --bg: #fbfaf7;
-  --surface: #ffffff;
-  --surface-2: #f4f2ec;
-  --border: #e4e0d6;
-  --text: #1a1f26;
-  --text-dim: #5d6670;
-  --accent: #2f6fed;
-  --accent-strong: #1f56c4;
-  --warm: #b9741f;
-  --code-bg: #f4f2ec;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --bg: #ffffff;
+  --surface: #f4f6fb;
+  --surface-2: #e8ecf5;
+  --border: #cdd4e3;
+  --text: #080d1a;
+  --text-dim: #4a5568;
+  --accent: #1a4fc4;
+  --accent-strong: #0f3699;
+  --warm: #b85c00;
+  --code-bg: #eef1f8;
+  --shadow: 0 1px 4px rgba(8,13,26,0.08), 0 8px 32px rgba(8,13,26,0.1);
 }
 
 /* Fontes usadas no site */
