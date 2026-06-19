@@ -24,7 +24,7 @@ import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://pedromendes-dev.github.io',
-  base: '/blog',
+  base: '/Blog-PedroMendes',
   trailingSlash: 'ignore',
   integrations: [mdx(), sitemap()],
   markdown: {
