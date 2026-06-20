@@ -14,7 +14,7 @@ export const SITE = {
   /** Idioma do site */
   lang: 'pt-BR',
   /** Frase de impacto na home (seu "pitch") */
-  tagline: 'Construo software que dura. Escrevo sobre arquitetura, código limpo e as decisões por trás dele.',
+  tagline: 'Construo software que dura. Escrevo sobre arquitetura de software, código limpo e as decisões de engenharia que fazem a diferença.',
   /** Profissão/cargo — aparece sob o nome */
   role: 'Full Stack Developer',
   /** Localização */
