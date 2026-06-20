@@ -3,40 +3,48 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import { createClient } from '@/lib/supabase';
 
 let error = '';
-let saved = { title: '', slug: '', description: '', tags: '', pub_date: '', published: false, content: '' };
+let fields = {
+  title: '', slug: '', description: '', tags: '', pub_date: '', published: false, content: '',
+};
+
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
-  const title = ((data.get('title') as string) ?? '').trim();
-  const slug = ((data.get('slug') as string) ?? '').trim();
-  const description = ((data.get('description') as string) ?? '').trim();
-  const content = ((data.get('content') as string) ?? '').trim();
-  const tagsRaw = ((data.get('tags') as string) ?? '').trim();
-  const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-  const published = data.get('published') === 'on';
-  const pub_date_raw = ((data.get('pub_date') as string) ?? '').trim() || new Date().toISOString().slice(0, 10);
 
-  saved = { title, slug, description, tags: tagsRaw, pub_date: pub_date_raw, published, content };
+  fields = {
+    title:       ((data.get('title')       as string) ?? '').trim(),
+    slug:        ((data.get('slug')        as string) ?? '').trim(),
+    description: ((data.get('description') as string) ?? '').trim(),
+    content:     ((data.get('content')     as string) ?? '').trim(),
+    tags:        ((data.get('tags')        as string) ?? '').trim(),
+    pub_date:    ((data.get('pub_date')    as string) ?? '').trim(),
+    published:   data.get('published') === 'on',
+  };
 
-  if (!title) error = 'O título é obrigatório.';
-  else if (!slug) error = 'O slug é obrigatório.';
-  else if (!description) error = 'A descrição é obrigatória.';
-  else if (!content) error = 'O conteúdo não pode estar vazio.';
-  else {
-    let pub_date: string;
-    try {
-      pub_date = new Date(pub_date_raw + 'T12:00:00.000Z').toISOString();
-    } catch {
-      pub_date = new Date().toISOString();
-    }
+  if      (!fields.title)                    error = 'O título é obrigatório.';
+  else if (!fields.slug)                     error = 'O slug é obrigatório.';
+  else if (!SLUG_RE.test(fields.slug))       error = 'Slug inválido. Use apenas letras minúsculas, números e hífens (ex: meu-post).';
+  else if (!fields.description)              error = 'A descrição é obrigatória.';
+  else if (!fields.content)                  error = 'O conteúdo não pode estar vazio.';
+
+  if (!error) {
+    const pub_date = fields.pub_date
+      ? new Date(fields.pub_date + 'T12:00:00.000Z').toISOString()
+      : new Date().toISOString();
+
+    const tags = fields.tags.split(',').map((t) => t.trim()).filter(Boolean);
 
     const supabase = createClient(Astro.cookies);
     const { error: err } = await supabase.from('posts').insert({
-      title, slug, description, content, tags, published, pub_date,
+      title: fields.title, slug: fields.slug, description: fields.description,
+      content: fields.content, tags, published: fields.published, pub_date,
     });
 
     if (err) {
-      error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
+      error = err.message.includes('unique')
+        ? 'Este slug já existe. Escolha outro.'
+        : `Erro ao salvar: ${err.message}`;
     } else {
       return Astro.redirect('/admin/posts');
     }
@@ -44,7 +52,6 @@ if (Astro.request.method === 'POST') {
 }
 
 const today = new Date().toISOString().slice(0, 10);
-const initialDate = saved.pub_date || today;
 ---
 <AdminLayout title="Novo post">
   <div class="page-header">
@@ -52,47 +59,59 @@ const initialDate = saved.pub_date || today;
     <a href="/admin/posts" class="back-link">← Voltar</a>
   </div>
 
-  {error && <div class="error">{error}</div>}
+  {error && <div class="error" role="alert">{error}</div>}
 
-  <form method="post" class="post-form" id="post-form">
+  <form method="post" class="post-form" novalidate>
     <div class="row">
       <div class="field full">
-        <label for="title">Título *</label>
-        <input type="text" id="title" name="title" required placeholder="Título do post" value={saved.title} />
+        <label for="title">Título <span class="req">*</span></label>
+        <input type="text" id="title" name="title" value={fields.title} placeholder="Título do post" autocomplete="off" />
       </div>
     </div>
+
     <div class="row">
       <div class="field full">
-        <label for="slug">Slug * <span class="hint">URL amigável (ex: meu-primeiro-post)</span></label>
-        <input type="text" id="slug" name="slug" required placeholder="meu-primeiro-post" value={saved.slug} />
+        <label for="slug">
+          Slug <span class="req">*</span>
+          <span class="hint">gerado automaticamente a partir do título</span>
+        </label>
+        <input type="text" id="slug" name="slug" value={fields.slug} placeholder="meu-primeiro-post" autocomplete="off" spellcheck="false" />
       </div>
     </div>
+
     <div class="row">
       <div class="field full">
-        <label for="description">Descrição * <span class="hint">Aparece nos cards e no SEO</span></label>
-        <textarea id="description" name="description" required rows="2" placeholder="Resumo do post...">{saved.description}</textarea>
+        <label for="description">Descrição <span class="req">*</span> <span class="hint">aparece nos cards e no SEO</span></label>
+        <textarea id="description" name="description" rows="2" placeholder="Resumo breve do post...">{fields.description}</textarea>
       </div>
     </div>
+
     <div class="row cols">
       <div class="field">
-        <label for="tags">Tags <span class="hint">Separadas por vírgula</span></label>
-        <input type="text" id="tags" name="tags" placeholder="dotnet, arquitetura, csharp" value={saved.tags} />
+        <label for="tags">Tags <span class="hint">separadas por vírgula</span></label>
+        <input type="text" id="tags" name="tags" value={fields.tags} placeholder="dotnet, csharp, arquitetura" autocomplete="off" />
       </div>
       <div class="field">
         <label for="pub_date">Data de publicação</label>
-        <input type="date" id="pub_date" name="pub_date" value={initialDate} />
+        <input type="date" id="pub_date" name="pub_date" value={fields.pub_date || today} />
       </div>
     </div>
 
     <div class="field full">
-      <label for="content">Conteúdo *</label>
-      <div id="monaco-container"></div>
-      <textarea id="content" name="content" style="display:none">{saved.content}</textarea>
+      <label for="content">Conteúdo <span class="req">*</span> <span class="hint">Markdown</span></label>
+      <textarea
+        id="content"
+        name="content"
+        class="editor"
+        rows="28"
+        placeholder="# Título do post&#10;&#10;## Introdução&#10;&#10;Escreva aqui em Markdown..."
+        spellcheck="false"
+      >{fields.content}</textarea>
     </div>
 
     <div class="footer">
       <label class="toggle-pub">
-        <input type="checkbox" name="published" id="published" checked={saved.published} />
+        <input type="checkbox" name="published" id="published" checked={fields.published} />
         <span>Publicar agora</span>
       </label>
       <div class="btns">
@@ -103,78 +122,76 @@ const initialDate = saved.pub_date || today;
   </form>
 </AdminLayout>
 
-<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
 <script>
-  const titleInput = document.getElementById('title') as HTMLInputElement | null;
-  const slugInput = document.getElementById('slug') as HTMLInputElement | null;
-  const textarea = document.getElementById('content') as HTMLTextAreaElement;
-  const form = document.getElementById('post-form') as HTMLFormElement;
+  const titleEl = document.getElementById('title') as HTMLInputElement;
+  const slugEl  = document.getElementById('slug')  as HTMLInputElement;
+  const form    = document.querySelector('form')   as HTMLFormElement;
 
-  let slugEdited = !!slugInput?.value;
-  slugInput?.addEventListener('input', () => { slugEdited = true; });
-  titleInput?.addEventListener('input', () => {
-    if (slugEdited || !slugInput) return;
-    slugInput.value = titleInput.value
+  // Gera slug a partir do título
+  let slugTouched = slugEl.value !== '';
+  slugEl.addEventListener('input', () => { slugTouched = true; });
+  titleEl.addEventListener('input', () => {
+    if (slugTouched) return;
+    slugEl.value = titleEl.value
       .toLowerCase()
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
   });
 
-  declare const require: any;
-  require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
-  require(['vs/editor/editor.main'], function () {
-    declare const monaco: any;
-    const editor = monaco.editor.create(document.getElementById('monaco-container'), {
-      value: textarea.value,
-      language: 'markdown',
-      theme: 'vs-dark',
-      minimap: { enabled: false },
-      wordWrap: 'on',
-      lineNumbers: 'on',
-      fontSize: 14,
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-    });
+  // Tab insere 2 espaços no editor
+  document.getElementById('content')?.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key !== 'Tab') return;
+    e.preventDefault();
+    const el = e.target as HTMLTextAreaElement;
+    const s = el.selectionStart, end = el.selectionEnd;
+    el.value = el.value.slice(0, s) + '  ' + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = s + 2;
+  });
 
-    editor.onDidChangeModelContent(() => {
-      textarea.value = editor.getValue();
-    });
+  // Validação antes de submeter
+  form.addEventListener('submit', (e) => {
+    const title   = (document.getElementById('title')   as HTMLInputElement).value.trim();
+    const slug    = (document.getElementById('slug')    as HTMLInputElement).value.trim();
+    const content = (document.getElementById('content') as HTMLTextAreaElement).value.trim();
+    const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-    form.addEventListener('submit', (e) => {
-      textarea.value = editor.getValue();
-      if (!textarea.value.trim()) {
-        e.preventDefault();
-        const existing = document.querySelector('.error');
-        const msg = 'O conteúdo não pode estar vazio.';
-        if (existing) { existing.textContent = msg; }
-        else {
-          const div = document.createElement('div');
-          div.className = 'error';
-          div.textContent = msg;
-          form.before(div);
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
+    let msg = '';
+    if (!title)            msg = 'O título é obrigatório.';
+    else if (!slug)        msg = 'O slug é obrigatório.';
+    else if (!SLUG_RE.test(slug)) msg = 'Slug inválido. Use apenas letras minúsculas, números e hífens.';
+    else if (!content)     msg = 'O conteúdo não pode estar vazio.';
+
+    if (msg) {
+      e.preventDefault();
+      let box = document.querySelector<HTMLDivElement>('.error');
+      if (!box) { box = document.createElement('div'); box.className = 'error'; box.setAttribute('role', 'alert'); form.before(box); }
+      box.textContent = msg;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   });
 </script>
 
 <style>
   .back-link { color: var(--text-dim); font-size: 0.9rem; }
   .back-link:hover { color: var(--accent); }
+
   .error {
-    background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3);
-    color: #fc8181; padding: 0.8rem 1rem; border-radius: 9px; margin-bottom: 1.5rem;
+    background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.4);
+    color: #fc8181; padding: 0.85rem 1.1rem; border-radius: 9px; margin-bottom: 1.5rem;
+    font-size: 0.9rem;
   }
+
   .post-form { display: flex; flex-direction: column; gap: 1.2rem; }
   .row { display: flex; gap: 1rem; }
   .cols { gap: 1.5rem; }
-  .field { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+  .field { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; }
   .full { flex: 1; }
+
   label { font-size: 0.82rem; color: var(--text-dim); font-weight: 500; }
-  .hint { font-weight: 400; opacity: 0.6; }
+  .req { color: #fc8181; }
+  .hint { font-weight: 400; opacity: 0.55; margin-left: 0.3rem; }
+
   input[type=text], input[type=date], textarea {
     padding: 0.7rem 0.9rem; background: var(--surface-2);
     border: 1px solid var(--border); border-radius: 9px; color: var(--text);
@@ -183,6 +200,16 @@ const initialDate = saved.pub_date || today;
   }
   input:focus, textarea:focus { border-color: var(--accent); }
   textarea { resize: vertical; }
+
+  .editor {
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    background: #080c14;
+    min-height: 420px;
+    tab-size: 2;
+  }
+
   .footer {
     display: flex; align-items: center; justify-content: space-between;
     padding-top: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;
@@ -192,15 +219,9 @@ const initialDate = saved.pub_date || today;
   .btns { display: flex; gap: 0.75rem; }
   .btn-cancel {
     padding: 0.65rem 1.2rem; border: 1px solid var(--border); border-radius: 9px;
-    color: var(--text-dim); font-size: 0.9rem; text-decoration: none;
-    transition: all 0.15s;
+    color: var(--text-dim); font-size: 0.9rem; text-decoration: none; transition: all 0.15s;
   }
   .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
-  #monaco-container {
-    height: 500px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    overflow: hidden;
-  }
+
   @media (max-width: 760px) { .cols { flex-direction: column; } }
 </style>

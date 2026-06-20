@@ -7,40 +7,48 @@ const { id } = Astro.params;
 if (!id) return Astro.redirect('/admin/posts');
 
 const supabase = createClient(Astro.cookies);
+const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
 let error = '';
-let submitted: { title: string; slug: string; description: string; content: string; tags: string; pub_date: string; published: boolean } | null = null;
+let submitted: {
+  title: string; slug: string; description: string; content: string;
+  tags: string; pub_date: string; published: boolean;
+} | null = null;
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
-  const title = ((data.get('title') as string) ?? '').trim();
-  const slug = ((data.get('slug') as string) ?? '').trim();
+
+  const title       = ((data.get('title')       as string) ?? '').trim();
+  const slug        = ((data.get('slug')        as string) ?? '').trim();
   const description = ((data.get('description') as string) ?? '').trim();
-  const content = ((data.get('content') as string) ?? '').trim();
-  const tagsRaw = ((data.get('tags') as string) ?? '').trim();
-  const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-  const published = data.get('published') === 'on';
-  const pub_date_raw = ((data.get('pub_date') as string) ?? '').trim();
+  const content     = ((data.get('content')     as string) ?? '').trim();
+  const tagsRaw     = ((data.get('tags')        as string) ?? '').trim();
+  const pub_date_raw = ((data.get('pub_date')   as string) ?? '').trim();
+  const published   = data.get('published') === 'on';
 
   submitted = { title, slug, description, content, tags: tagsRaw, pub_date: pub_date_raw, published };
 
-  if (!title) error = 'O título é obrigatório.';
-  else if (!slug) error = 'O slug é obrigatório.';
-  else if (!description) error = 'A descrição é obrigatória.';
-  else if (!content) error = 'O conteúdo não pode estar vazio.';
-  else {
-    let pub_date: string;
-    try {
-      pub_date = new Date(pub_date_raw + 'T12:00:00.000Z').toISOString();
-    } catch {
-      pub_date = new Date().toISOString();
-    }
+  if      (!title)                   error = 'O titulo e obrigatorio.';
+  else if (!slug)                    error = 'O slug e obrigatorio.';
+  else if (!SLUG_RE.test(slug))      error = 'Slug invalido. Use apenas letras minusculas, numeros e hifens (ex: meu-post).';
+  else if (!description)             error = 'A descricao e obrigatoria.';
+  else if (!content)                 error = 'O conteudo nao pode estar vazio.';
+
+  if (!error) {
+    const pub_date = pub_date_raw
+      ? new Date(pub_date_raw + 'T12:00:00.000Z').toISOString()
+      : new Date().toISOString();
+
+    const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
 
     const { error: err } = await supabase.from('posts').update({
       title, slug, description, content, tags, published, pub_date,
     }).eq('id', id);
 
     if (err) {
-      error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
+      error = err.message.includes('unique')
+        ? 'Este slug ja existe. Escolha outro.'
+        : `Erro ao salvar: ${err.message}`;
     } else {
       return Astro.redirect('/admin/posts');
     }
@@ -53,59 +61,71 @@ const { data: post, error: fetchErr } = await supabase
 if (fetchErr || !post) return Astro.redirect('/admin/posts');
 const p = post as Post;
 
-// On error: show what the user submitted; on load: show database values
 const form = submitted ?? {
-  title: p.title,
-  slug: p.slug,
+  title:       p.title,
+  slug:        p.slug,
   description: p.description,
-  content: p.content,
-  tags: p.tags.join(', '),
-  pub_date: new Date(p.pub_date).toISOString().slice(0, 10),
-  published: p.published,
+  content:     p.content,
+  tags:        p.tags.join(', '),
+  pub_date:    new Date(p.pub_date).toISOString().slice(0, 10),
+  published:   p.published,
 };
 ---
 <AdminLayout title={`Editar: ${p.title}`}>
   <div class="page-header">
     <h1 class="page-title">Editar post</h1>
-    <a href="/admin/posts" class="back-link">← Voltar</a>
+    <div class="head-actions">
+      {p.published && (
+        <a href={`/blog/${p.slug}`} target="_blank" class="btn-view">Ver publicado ↗</a>
+      )}
+      <a href="/admin/posts" class="back-link">← Voltar</a>
+    </div>
   </div>
 
-  {error && <div class="error">{error}</div>}
+  {error && <div class="error" role="alert">{error}</div>}
 
-  <form method="post" class="post-form" id="post-form">
+  <form method="post" class="post-form" novalidate>
     <div class="row">
       <div class="field full">
-        <label for="title">Título *</label>
-        <input type="text" id="title" name="title" required value={form.title} />
+        <label for="title">Titulo <span class="req">*</span></label>
+        <input type="text" id="title" name="title" value={form.title} autocomplete="off" />
       </div>
     </div>
+
     <div class="row">
       <div class="field full">
-        <label for="slug">Slug * <span class="hint">URL amigável</span></label>
-        <input type="text" id="slug" name="slug" required value={form.slug} />
+        <label for="slug">Slug <span class="req">*</span> <span class="hint">URL do post</span></label>
+        <input type="text" id="slug" name="slug" value={form.slug} autocomplete="off" spellcheck="false" />
       </div>
     </div>
+
     <div class="row">
       <div class="field full">
-        <label for="description">Descrição *</label>
-        <textarea id="description" name="description" required rows="2">{form.description}</textarea>
+        <label for="description">Descricao <span class="req">*</span></label>
+        <textarea id="description" name="description" rows="2">{form.description}</textarea>
       </div>
     </div>
+
     <div class="row cols">
       <div class="field">
-        <label for="tags">Tags <span class="hint">Separadas por vírgula</span></label>
-        <input type="text" id="tags" name="tags" value={form.tags} />
+        <label for="tags">Tags <span class="hint">separadas por virgula</span></label>
+        <input type="text" id="tags" name="tags" value={form.tags} autocomplete="off" />
       </div>
       <div class="field">
-        <label for="pub_date">Data de publicação</label>
+        <label for="pub_date">Data de publicacao</label>
         <input type="date" id="pub_date" name="pub_date" value={form.pub_date} />
       </div>
     </div>
 
     <div class="field full">
-      <label for="content">Conteúdo *</label>
-      <div id="monaco-container"></div>
-      <textarea id="content" name="content" style="display:none">{form.content}</textarea>
+      <label for="content">Conteudo <span class="req">*</span> <span class="hint">Markdown</span></label>
+      <textarea
+        id="content"
+        name="content"
+        class="editor"
+        rows="28"
+        spellcheck="false"
+      >{form.content}</textarea>
     </div>
 
     <div class="footer">
@@ -115,71 +135,74 @@ const form = submitted ?? {
       </label>
       <div class="btns">
         <a href="/admin/posts" class="btn-cancel">Cancelar</a>
-        <button type="submit" class="btn-primary">Salvar alterações</button>
+        <button type="submit" class="btn-primary">Salvar alteracoes</button>
       </div>
     </div>
   </form>
 </AdminLayout>
 
-<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
 <script>
-  declare const require: any;
-  const textarea = document.getElementById('content') as HTMLTextAreaElement;
-  const form = document.getElementById('post-form') as HTMLFormElement;
+  const form = document.querySelector('form') as HTMLFormElement;
+  const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-  require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
-  require(['vs/editor/editor.main'], function () {
-    declare const monaco: any;
-    const editor = monaco.editor.create(document.getElementById('monaco-container'), {
-      value: textarea.value,
-      language: 'markdown',
-      theme: 'vs-dark',
-      minimap: { enabled: false },
-      wordWrap: 'on',
-      lineNumbers: 'on',
-      fontSize: 14,
-      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-    });
+  // Tab insere 2 espacos no editor
+  document.getElementById('content')?.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key !== 'Tab') return;
+    e.preventDefault();
+    const el = e.target as HTMLTextAreaElement;
+    const s = el.selectionStart, end = el.selectionEnd;
+    el.value = el.value.slice(0, s) + '  ' + el.value.slice(end);
+    el.selectionStart = el.selectionEnd = s + 2;
+  });
 
-    editor.onDidChangeModelContent(() => {
-      textarea.value = editor.getValue();
-    });
+  // Validacao antes de submeter
+  form.addEventListener('submit', (e) => {
+    const title   = (document.getElementById('title')   as HTMLInputElement).value.trim();
+    const slug    = (document.getElementById('slug')    as HTMLInputElement).value.trim();
+    const content = (document.getElementById('content') as HTMLTextAreaElement).value.trim();
 
-    form.addEventListener('submit', (e) => {
-      textarea.value = editor.getValue();
-      if (!textarea.value.trim()) {
-        e.preventDefault();
-        const existing = document.querySelector('.error');
-        const msg = 'O conteúdo não pode estar vazio.';
-        if (existing) { existing.textContent = msg; }
-        else {
-          const div = document.createElement('div');
-          div.className = 'error';
-          div.textContent = msg;
-          form.before(div);
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
+    let msg = '';
+    if (!title)                  msg = 'O titulo e obrigatorio.';
+    else if (!slug)              msg = 'O slug e obrigatorio.';
+    else if (!SLUG_RE.test(slug)) msg = 'Slug invalido. Use apenas letras minusculas, numeros e hifens.';
+    else if (!content)           msg = 'O conteudo nao pode estar vazio.';
+
+    if (msg) {
+      e.preventDefault();
+      let box = document.querySelector<HTMLDivElement>('.error');
+      if (!box) { box = document.createElement('div'); box.className = 'error'; box.setAttribute('role', 'alert'); form.before(box); }
+      box.textContent = msg;
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   });
 </script>
 
 <style>
+  .head-actions { display: flex; align-items: center; gap: 1rem; }
   .back-link { color: var(--text-dim); font-size: 0.9rem; }
   .back-link:hover { color: var(--accent); }
-  .error {
-    background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3);
-    color: #fc8181; padding: 0.8rem 1rem; border-radius: 9px; margin-bottom: 1.5rem;
+  .btn-view {
+    font-size: 0.85rem; color: var(--text-dim); border: 1px solid var(--border);
+    padding: 0.4rem 0.8rem; border-radius: 8px; transition: all 0.15s;
   }
+  .btn-view:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .error {
+    background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.4);
+    color: #fc8181; padding: 0.85rem 1.1rem; border-radius: 9px; margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
   .post-form { display: flex; flex-direction: column; gap: 1.2rem; }
   .row { display: flex; gap: 1rem; }
   .cols { gap: 1.5rem; }
-  .field { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+  .field { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; }
   .full { flex: 1; }
+
   label { font-size: 0.82rem; color: var(--text-dim); font-weight: 500; }
-  .hint { font-weight: 400; opacity: 0.6; }
+  .req { color: #fc8181; }
+  .hint { font-weight: 400; opacity: 0.55; margin-left: 0.3rem; }
+
   input[type=text], input[type=date], textarea {
     padding: 0.7rem 0.9rem; background: var(--surface-2);
     border: 1px solid var(--border); border-radius: 9px; color: var(--text);
@@ -188,6 +211,16 @@ const form = submitted ?? {
   }
   input:focus, textarea:focus { border-color: var(--accent); }
   textarea { resize: vertical; }
+
+  .editor {
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    background: #080c14;
+    min-height: 420px;
+    tab-size: 2;
+  }
+
   .footer {
     display: flex; align-items: center; justify-content: space-between;
     padding-top: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;
@@ -200,11 +233,6 @@ const form = submitted ?? {
     color: var(--text-dim); font-size: 0.9rem; text-decoration: none; transition: all 0.15s;
   }
   .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
-  #monaco-container {
-    height: 500px;
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    overflow: hidden;
-  }
+
   @media (max-width: 760px) { .cols { flex-direction: column; } }
 </style>
