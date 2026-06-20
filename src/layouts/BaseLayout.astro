@@ -16,6 +16,9 @@ const props = Astro.props;
 <!doctype html>
 <html lang={SITE.lang}>
   <head>
+    <script is:inline>
+      if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light');
+    </script>
     <BaseHead {...props} />
   </head>
   <body>
