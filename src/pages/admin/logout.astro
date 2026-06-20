@@ -1,0 +1,9 @@
+---
+import { createClient } from '@/lib/supabase';
+
+if (Astro.request.method === 'POST') {
+  const supabase = createClient(Astro.cookies);
+  await supabase.auth.signOut();
+}
+return Astro.redirect('/admin/login');
+---

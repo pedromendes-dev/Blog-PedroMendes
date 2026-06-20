@@ -1,0 +1,127 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { createClient } from '@/lib/supabase';
+import { formatDate } from '@/utils';
+import type { Post } from '@/types';
+
+const supabase = createClient(Astro.cookies);
+
+// Handle delete
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+  const action = data.get('action');
+  const id = data.get('id') as string;
+  if (action === 'delete' && id) {
+    await supabase.from('posts').delete().eq('id', id);
+  }
+  if (action === 'toggle' && id) {
+    const { data: p } = await supabase.from('posts').select('published').eq('id', id).single();
+    if (p) await supabase.from('posts').update({ published: !p.published }).eq('id', id);
+  }
+  return Astro.redirect('/admin/posts');
+}
+
+const { data } = await supabase
+  .from('posts')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+const posts = (data ?? []) as Post[];
+---
+<AdminLayout title="Posts">
+  <div class="page-header">
+    <h1 class="page-title">Posts <span class="count">{posts.length}</span></h1>
+    <a href="/admin/new" class="btn-primary">+ Novo post</a>
+  </div>
+
+  {posts.length === 0 ? (
+    <div class="empty">
+      <p>Nenhum post ainda.</p>
+      <a href="/admin/new" class="btn-primary" style="margin-top:1rem;display:inline-flex">Criar primeiro post</a>
+    </div>
+  ) : (
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Título</th>
+            <th>Slug</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {posts.map((p) => (
+            <tr>
+              <td class="title-cell"><a href={`/admin/edit/${p.id}`}>{p.title}</a></td>
+              <td class="mono dim">{p.slug}</td>
+              <td>
+                <form method="post" style="display:inline">
+                  <input type="hidden" name="action" value="toggle" />
+                  <input type="hidden" name="id" value={p.id} />
+                  <button type="submit" class:list={['badge', p.published ? 'pub' : 'draft']}>
+                    {p.published ? '● Publicado' : '○ Rascunho'}
+                  </button>
+                </form>
+              </td>
+              <td class="dim">{formatDate(new Date(p.pub_date))}</td>
+              <td class="actions">
+                <a href={`/admin/edit/${p.id}`} class="act-btn edit">Editar</a>
+                {p.published && (
+                  <a href={`/blog/${p.slug}`} target="_blank" class="act-btn view">Ver</a>
+                )}
+                <form method="post" style="display:inline" onsubmit="return confirm('Deletar este post?')">
+                  <input type="hidden" name="action" value="delete" />
+                  <input type="hidden" name="id" value={p.id} />
+                  <button type="submit" class="act-btn del">Del</button>
+                </form>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</AdminLayout>
+
+<style>
+  .count { font-size: 1rem; color: var(--text-dim); font-weight: 400; margin-left: 0.4rem; }
+  .table-wrap { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 0.75rem 1rem; background: var(--surface-2);
+    font-size: 0.78rem; color: var(--text-dim); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  td { padding: 0.8rem 1rem; border-top: 1px solid var(--border); font-size: 0.9rem; vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .title-cell a { color: var(--text); font-weight: 500; }
+  .title-cell a:hover { color: var(--accent); }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; }
+  .dim { color: var(--text-dim); }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500;
+    cursor: pointer; border: none; transition: opacity 0.15s;
+  }
+  .badge:hover { opacity: 0.8; }
+  .pub { background: rgba(72,187,120,0.15); color: #68d391; }
+  .draft { background: var(--surface-2); color: var(--text-dim); }
+
+  .actions { display: flex; gap: 0.4rem; align-items: center; }
+  .act-btn {
+    padding: 0.3rem 0.65rem; border-radius: 7px; font-size: 0.8rem; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: transparent;
+    text-decoration: none; display: inline-flex; transition: all 0.15s;
+  }
+  .edit { color: var(--accent); }
+  .edit:hover { border-color: var(--accent); background: rgba(79,142,247,0.1); }
+  .view { color: var(--text-dim); }
+  .view:hover { color: var(--text); border-color: var(--text-dim); }
+  .del { color: #fc8181; border-color: transparent; }
+  .del:hover { border-color: #fc8181; background: rgba(252,129,129,0.1); }
+
+  .empty { color: var(--text-dim); padding: 3rem 0; text-align: center; }
+</style>

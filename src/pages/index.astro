@@ -1,20 +1,25 @@
 ---
-import { getCollection } from 'astro:content';
 import readingTime from 'reading-time';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PostCard from '@/components/PostCard.astro';
 import Signature from '@/components/Signature.astro';
 import Icon from '@/components/Icon.astro';
-import { SITE, SOCIALS } from '@/consts';
+import { SITE } from '@/consts';
 import { href } from '@/utils';
+import { createClient } from '@/lib/supabase';
+import type { Post } from '@/types';
 
-const posts = (await getCollection('blog', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const supabase = createClient(Astro.cookies);
+const { data: posts } = await supabase
+  .from('posts')
+  .select('*')
+  .eq('published', true)
+  .order('pub_date', { ascending: false })
+  .limit(4);
 
-const recent = posts.slice(0, 4);
-const minutesOf = (body: string) => Math.max(1, Math.round(readingTime(body ?? '').minutes));
+const recent = (posts ?? []) as Post[];
+const minutesOf = (content: string) => Math.max(1, Math.round(readingTime(content).minutes));
 
-// Edite à vontade — sua stack principal
 const stack = ['C# / .NET', 'Node.js', 'React', 'TypeScript', 'SQL Server', 'Docker'];
 ---
 <BaseLayout>
@@ -32,8 +37,7 @@ const stack = ['C# / .NET', 'Node.js', 'React', 'TypeScript', 'SQL Server', 'Doc
     </div>
 
     <div class="avatar-wrap">
-      <!-- SEU ROSTO: troque /avatar.svg por sua foto em public/ (ex.: avatar.jpg) -->
-      <img src={import.meta.env.BASE_URL.replace(/\/$/, '') + '/avatar.jpeg'} alt={SITE.author} class="avatar" width="280" height="280" />
+      <img src="/avatar.jpeg" alt={SITE.author} class="avatar" width="280" height="280" />
       <div class="ring" aria-hidden="true"></div>
     </div>
   </section>
@@ -53,17 +57,17 @@ const stack = ['C# / .NET', 'Node.js', 'React', 'TypeScript', 'SQL Server', 'Doc
       <a href={href('/blog')} class="all">ver todos <Icon name="arrow" size={15} /></a>
     </div>
     {recent.length === 0 ? (
-      <p class="empty">Ainda não há posts. Crie o primeiro em <code>src/content/blog/</code>.</p>
+      <p class="empty">Ainda não há posts. <a href="/admin">Crie o primeiro →</a></p>
     ) : (
       <div class="grid">
         {recent.map((p, i) => (
           <PostCard
-            id={p.id}
-            title={p.data.title}
-            description={p.data.description}
-            pubDate={p.data.pubDate}
-            tags={p.data.tags}
-            minutes={minutesOf(p.body ?? '')}
+            slug={p.slug}
+            title={p.title}
+            description={p.description}
+            pubDate={new Date(p.pub_date)}
+            tags={p.tags}
+            minutes={minutesOf(p.content)}
             featured={i === 0}
           />
         ))}

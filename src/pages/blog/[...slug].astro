@@ -1,20 +1,52 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { marked } from 'marked';
 import readingTime from 'reading-time';
 import PostLayout from '@/layouts/PostLayout.astro';
+import { createClient } from '@/lib/supabase';
+import type { Post } from '@/types';
 
-export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
-  return posts.map((post) => ({
-    params: { slug: post.id },
-    props: { post },
-  }));
-}
+marked.use({
+  renderer: {
+    heading({ text, depth, raw }: { text: string; depth: number; raw: string }) {
+      const id = raw
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      return `<h${depth} id="${id}">${text}</h${depth}>\n`;
+    },
+  },
+});
 
-const { post } = Astro.props;
-const { Content, headings } = await render(post);
-const minutes = Math.max(1, Math.round(readingTime(post.body ?? '').minutes));
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/blog');
+
+const supabase = createClient(Astro.cookies);
+const { data: post, error } = await supabase
+  .from('posts')
+  .select('*')
+  .eq('slug', slug)
+  .eq('published', true)
+  .single();
+
+if (error || !post) return Astro.redirect('/blog');
+
+const p = post as Post;
+const minutes = Math.max(1, Math.round(readingTime(p.content).minutes));
+const html = await marked.parse(p.content);
+
+const headings = [...p.content.matchAll(/^(#{2,3})\s+(.+)$/gm)].map((m) => ({
+  depth: m[1].length,
+  text: m[2],
+  slug: m[2]
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, ''),
+}));
 ---
-<PostLayout post={post} minutes={minutes} headings={headings}>
-  <Content />
+<PostLayout post={p} minutes={minutes} headings={headings}>
+  <Fragment set:html={html} />
 </PostLayout>

@@ -1,0 +1,101 @@
+---
+import { createClient } from '@/lib/supabase';
+
+interface Props {
+  title?: string;
+}
+const { title = 'Admin' } = Astro.props;
+const supabase = createClient(Astro.cookies);
+const { data: { user } } = await supabase.auth.getUser();
+const path = Astro.url.pathname;
+---
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} · Admin</title>
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0e17; --surface: #111827; --surface-2: #1a2235;
+      --border: #1e2d45; --text: #e8edf5; --text-dim: #8896aa;
+      --accent: #4f8ef7; --warm: #f0a84a;
+      --font: 'Inter', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); display: flex; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font-family: inherit; }
+
+    .sidebar {
+      width: 220px; min-height: 100vh; background: var(--surface);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      padding: 1.5rem 1rem; flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+    }
+    .brand { font-weight: 700; font-size: 1rem; color: var(--text); padding: 0 0.5rem 1.5rem; border-bottom: 1px solid var(--border); }
+    .brand span { color: var(--accent); }
+
+    nav { margin-top: 1.5rem; flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+    nav a {
+      display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.75rem;
+      border-radius: 8px; font-size: 0.9rem; color: var(--text-dim);
+      transition: background 0.15s, color 0.15s;
+    }
+    nav a:hover { background: var(--surface-2); color: var(--text); }
+    nav a.active { background: var(--surface-2); color: var(--accent); }
+
+    .user-area { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: auto; }
+    .email { font-size: 0.75rem; color: var(--text-dim); padding: 0 0.5rem 0.75rem; word-break: break-all; }
+    .logout-btn {
+      width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; background: transparent; color: var(--text-dim);
+      font-size: 0.85rem; cursor: pointer; transition: all 0.15s; text-align: left;
+    }
+    .logout-btn:hover { border-color: #e53e3e; color: #e53e3e; }
+
+    .main { flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .page-title { font-size: 1.6rem; font-weight: 700; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.2rem; background: var(--accent); color: #fff;
+      border: none; border-radius: 9px; font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; text-decoration: none; transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    @media (max-width: 760px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; min-height: auto; height: auto; position: static; }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">Pedro<span>.</span>blog</div>
+    <nav>
+      <a href="/admin/posts" class:list={[{ active: path.startsWith('/admin/posts') || path === '/admin' }]}>
+        📝 Posts
+      </a>
+      <a href="/admin/new" class:list={[{ active: path === '/admin/new' }]}>
+        ✏️ Novo post
+      </a>
+      <a href="/" target="_blank">🔗 Ver blog</a>
+    </nav>
+    <div class="user-area">
+      <p class="email">{user?.email}</p>
+      <form method="post" action="/admin/logout">
+        <button type="submit" class="logout-btn">Sair →</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="main">
+    <slot />
+  </main>
+</body>
+</html>
