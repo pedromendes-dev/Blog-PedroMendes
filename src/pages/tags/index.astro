@@ -1,11 +1,19 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import { createClient } from '@/lib/supabase';
 import { href } from '@/utils';
+import type { Post } from '@/types';
 
-const posts = await getCollection('blog', ({ data }) => !data.draft);
+const supabase = createClient(Astro.cookies);
+const { data } = await supabase
+  .from('posts')
+  .select('tags')
+  .eq('published', true);
+
 const counts = new Map<string, number>();
-for (const p of posts) for (const t of p.data.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+for (const row of (data ?? []) as Pick<Post, 'tags'>[]) {
+  for (const t of row.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+}
 const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]);
 ---
 <BaseLayout title="Tags" description="Navegue os artigos por assunto.">

@@ -14,7 +14,7 @@ export const SITE = {
   /** Idioma do site */
   lang: 'pt-BR',
   /** Frase de impacto na home (seu "pitch") */
-  tagline: 'Construo software que dura. Escrevo sobre arquitetura, código limpo e as decisões por trás dele.',
+  tagline: 'Construo software que dura. Escrevo sobre arquitetura de software, código limpo e as decisões de engenharia que fazem a diferença.',
   /** Profissão/cargo — aparece sob o nome */
   role: 'Full Stack Developer',
   /** Localização */
@@ -24,7 +24,7 @@ export const SITE = {
 /** Links das suas redes — deixe a string vazia ('') para esconder o ícone */
 export const SOCIALS = {
   github: 'https://github.com/pedromendes-dev',
-  linkedin: 'https://linkedin.com/in/pedro-mendes',
+  linkedin: 'https://linkedin.com/in/pedro-elias-mendes-1380a1335',
   email: 'pedromendes211205@gmail.com',
   twitter: '', // ex.: 'https://x.com/seu_user'
 } as const;

@@ -8,27 +8,42 @@ if (!id) return Astro.redirect('/admin/posts');
 
 const supabase = createClient(Astro.cookies);
 let error = '';
+let submitted: { title: string; slug: string; description: string; content: string; tags: string; pub_date: string; published: boolean } | null = null;
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
-  const title = (data.get('title') as string).trim();
-  const slug = (data.get('slug') as string).trim();
-  const description = (data.get('description') as string).trim();
-  const content = (data.get('content') as string).trim();
-  const tagsRaw = (data.get('tags') as string).trim();
+  const title = ((data.get('title') as string) ?? '').trim();
+  const slug = ((data.get('slug') as string) ?? '').trim();
+  const description = ((data.get('description') as string) ?? '').trim();
+  const content = ((data.get('content') as string) ?? '').trim();
+  const tagsRaw = ((data.get('tags') as string) ?? '').trim();
   const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
   const published = data.get('published') === 'on';
-  const pub_date = (data.get('pub_date') as string);
+  const pub_date_raw = ((data.get('pub_date') as string) ?? '').trim();
 
-  const { error: err } = await supabase.from('posts').update({
-    title, slug, description, content, tags, published,
-    pub_date: new Date(pub_date).toISOString(),
-  }).eq('id', id);
+  submitted = { title, slug, description, content, tags: tagsRaw, pub_date: pub_date_raw, published };
 
-  if (err) {
-    error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
-  } else {
-    return Astro.redirect('/admin/posts');
+  if (!title) error = 'O título é obrigatório.';
+  else if (!slug) error = 'O slug é obrigatório.';
+  else if (!description) error = 'A descrição é obrigatória.';
+  else if (!content) error = 'O conteúdo não pode estar vazio.';
+  else {
+    let pub_date: string;
+    try {
+      pub_date = new Date(pub_date_raw + 'T12:00:00.000Z').toISOString();
+    } catch {
+      pub_date = new Date().toISOString();
+    }
+
+    const { error: err } = await supabase.from('posts').update({
+      title, slug, description, content, tags, published, pub_date,
+    }).eq('id', id);
+
+    if (err) {
+      error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
+    } else {
+      return Astro.redirect('/admin/posts');
+    }
   }
 }
 
@@ -37,8 +52,17 @@ const { data: post, error: fetchErr } = await supabase
 
 if (fetchErr || !post) return Astro.redirect('/admin/posts');
 const p = post as Post;
-const tagsStr = p.tags.join(', ');
-const pubDateStr = new Date(p.pub_date).toISOString().slice(0, 10);
+
+// On error: show what the user submitted; on load: show database values
+const form = submitted ?? {
+  title: p.title,
+  slug: p.slug,
+  description: p.description,
+  content: p.content,
+  tags: p.tags.join(', '),
+  pub_date: new Date(p.pub_date).toISOString().slice(0, 10),
+  published: p.published,
+};
 ---
 <AdminLayout title={`Editar: ${p.title}`}>
   <div class="page-header">
@@ -48,44 +72,45 @@ const pubDateStr = new Date(p.pub_date).toISOString().slice(0, 10);
 
   {error && <div class="error">{error}</div>}
 
-  <form method="post" class="post-form">
+  <form method="post" class="post-form" id="post-form">
     <div class="row">
       <div class="field full">
         <label for="title">Título *</label>
-        <input type="text" id="title" name="title" required value={p.title} />
+        <input type="text" id="title" name="title" required value={form.title} />
       </div>
     </div>
     <div class="row">
       <div class="field full">
         <label for="slug">Slug * <span class="hint">URL amigável</span></label>
-        <input type="text" id="slug" name="slug" required value={p.slug} pattern="[a-z0-9-]+" />
+        <input type="text" id="slug" name="slug" required value={form.slug} pattern="[a-z0-9-]+" />
       </div>
     </div>
     <div class="row">
       <div class="field full">
         <label for="description">Descrição *</label>
-        <textarea id="description" name="description" required rows="2">{p.description}</textarea>
+        <textarea id="description" name="description" required rows="2">{form.description}</textarea>
       </div>
     </div>
     <div class="row cols">
       <div class="field">
         <label for="tags">Tags <span class="hint">Separadas por vírgula</span></label>
-        <input type="text" id="tags" name="tags" value={tagsStr} />
+        <input type="text" id="tags" name="tags" value={form.tags} />
       </div>
       <div class="field">
         <label for="pub_date">Data de publicação</label>
-        <input type="date" id="pub_date" name="pub_date" value={pubDateStr} />
+        <input type="date" id="pub_date" name="pub_date" value={form.pub_date} />
       </div>
     </div>
 
     <div class="field full">
-      <label for="content">Conteúdo * <span class="hint">Markdown</span></label>
-      <textarea id="content" name="content" required rows="20">{p.content}</textarea>
+      <label for="content">Conteúdo *</label>
+      <div id="monaco-container"></div>
+      <textarea id="content" name="content" style="display:none">{form.content}</textarea>
     </div>
 
     <div class="footer">
       <label class="toggle-pub">
-        <input type="checkbox" name="published" id="published" checked={p.published} />
+        <input type="checkbox" name="published" id="published" checked={form.published} />
         <span>Publicado</span>
       </label>
       <div class="btns">
@@ -96,16 +121,48 @@ const pubDateStr = new Date(p.pub_date).toISOString().slice(0, 10);
   </form>
 </AdminLayout>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
 <script>
-  declare const EasyMDE: any;
-  new EasyMDE({
-    element: document.getElementById('content'),
-    spellChecker: false,
-    autosave: { enabled: true, uniqueId: 'edit-post-' + window.location.pathname },
-    toolbar: ['bold','italic','heading','|','quote','unordered-list','ordered-list','|','link','image','code','|','preview','side-by-side','fullscreen','|','guide'],
-    minHeight: '400px',
+  declare const require: any;
+  const textarea = document.getElementById('content') as HTMLTextAreaElement;
+  const form = document.getElementById('post-form') as HTMLFormElement;
+
+  require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+  require(['vs/editor/editor.main'], function () {
+    declare const monaco: any;
+    const editor = monaco.editor.create(document.getElementById('monaco-container'), {
+      value: textarea.value,
+      language: 'markdown',
+      theme: 'vs-dark',
+      minimap: { enabled: false },
+      wordWrap: 'on',
+      lineNumbers: 'on',
+      fontSize: 14,
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+    });
+
+    editor.onDidChangeModelContent(() => {
+      textarea.value = editor.getValue();
+    });
+
+    form.addEventListener('submit', (e) => {
+      textarea.value = editor.getValue();
+      if (!textarea.value.trim()) {
+        e.preventDefault();
+        const existing = document.querySelector('.error');
+        const msg = 'O conteúdo não pode estar vazio.';
+        if (existing) { existing.textContent = msg; }
+        else {
+          const div = document.createElement('div');
+          div.className = 'error';
+          div.textContent = msg;
+          form.before(div);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
   });
 </script>
 
@@ -143,13 +200,11 @@ const pubDateStr = new Date(p.pub_date).toISOString().slice(0, 10);
     color: var(--text-dim); font-size: 0.9rem; text-decoration: none; transition: all 0.15s;
   }
   .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
-  .EasyMDEContainer .CodeMirror {
-    background: var(--surface-2) !important; color: var(--text) !important;
-    border: 1px solid var(--border) !important; border-radius: 0 0 9px 9px !important;
+  #monaco-container {
+    height: 500px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
   }
-  .editor-toolbar { background: var(--surface) !important; border-color: var(--border) !important; border-radius: 9px 9px 0 0 !important; }
-  .editor-toolbar button { color: var(--text-dim) !important; }
-  .editor-toolbar button:hover, .editor-toolbar button.active { background: var(--surface-2) !important; color: var(--text) !important; }
-  .editor-preview { background: var(--bg) !important; color: var(--text) !important; }
   @media (max-width: 760px) { .cols { flex-direction: column; } }
 </style>

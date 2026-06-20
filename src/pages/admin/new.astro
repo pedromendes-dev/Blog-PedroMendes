@@ -3,32 +3,48 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import { createClient } from '@/lib/supabase';
 
 let error = '';
+let saved = { title: '', slug: '', description: '', tags: '', pub_date: '', published: false, content: '' };
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
-  const title = (data.get('title') as string).trim();
-  const slug = (data.get('slug') as string).trim();
-  const description = (data.get('description') as string).trim();
-  const content = (data.get('content') as string).trim();
-  const tagsRaw = (data.get('tags') as string).trim();
+  const title = ((data.get('title') as string) ?? '').trim();
+  const slug = ((data.get('slug') as string) ?? '').trim();
+  const description = ((data.get('description') as string) ?? '').trim();
+  const content = ((data.get('content') as string) ?? '').trim();
+  const tagsRaw = ((data.get('tags') as string) ?? '').trim();
   const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
   const published = data.get('published') === 'on';
-  const pub_date = (data.get('pub_date') as string) || new Date().toISOString().slice(0, 10);
+  const pub_date_raw = ((data.get('pub_date') as string) ?? '').trim() || new Date().toISOString().slice(0, 10);
 
-  const supabase = createClient(Astro.cookies);
-  const { error: err } = await supabase.from('posts').insert({
-    title, slug, description, content, tags, published,
-    pub_date: new Date(pub_date).toISOString(),
-  });
+  saved = { title, slug, description, tags: tagsRaw, pub_date: pub_date_raw, published, content };
 
-  if (err) {
-    error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
-  } else {
-    return Astro.redirect('/admin/posts');
+  if (!title) error = 'O título é obrigatório.';
+  else if (!slug) error = 'O slug é obrigatório.';
+  else if (!description) error = 'A descrição é obrigatória.';
+  else if (!content) error = 'O conteúdo não pode estar vazio.';
+  else {
+    let pub_date: string;
+    try {
+      pub_date = new Date(pub_date_raw + 'T12:00:00.000Z').toISOString();
+    } catch {
+      pub_date = new Date().toISOString();
+    }
+
+    const supabase = createClient(Astro.cookies);
+    const { error: err } = await supabase.from('posts').insert({
+      title, slug, description, content, tags, published, pub_date,
+    });
+
+    if (err) {
+      error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
+    } else {
+      return Astro.redirect('/admin/posts');
+    }
   }
 }
 
 const today = new Date().toISOString().slice(0, 10);
+const initialDate = saved.pub_date || today;
 ---
 <AdminLayout title="Novo post">
   <div class="page-header">
@@ -38,44 +54,45 @@ const today = new Date().toISOString().slice(0, 10);
 
   {error && <div class="error">{error}</div>}
 
-  <form method="post" class="post-form">
+  <form method="post" class="post-form" id="post-form">
     <div class="row">
       <div class="field full">
         <label for="title">Título *</label>
-        <input type="text" id="title" name="title" required placeholder="Título do post" />
+        <input type="text" id="title" name="title" required placeholder="Título do post" value={saved.title} />
       </div>
     </div>
     <div class="row">
       <div class="field full">
         <label for="slug">Slug * <span class="hint">URL amigável (ex: meu-primeiro-post)</span></label>
-        <input type="text" id="slug" name="slug" required placeholder="meu-primeiro-post" pattern="[a-z0-9-]+" />
+        <input type="text" id="slug" name="slug" required placeholder="meu-primeiro-post" pattern="[a-z0-9-]+" value={saved.slug} />
       </div>
     </div>
     <div class="row">
       <div class="field full">
         <label for="description">Descrição * <span class="hint">Aparece nos cards e no SEO</span></label>
-        <textarea id="description" name="description" required rows="2" placeholder="Resumo do post..."></textarea>
+        <textarea id="description" name="description" required rows="2" placeholder="Resumo do post...">{saved.description}</textarea>
       </div>
     </div>
     <div class="row cols">
       <div class="field">
         <label for="tags">Tags <span class="hint">Separadas por vírgula</span></label>
-        <input type="text" id="tags" name="tags" placeholder="dotnet, arquitetura, csharp" />
+        <input type="text" id="tags" name="tags" placeholder="dotnet, arquitetura, csharp" value={saved.tags} />
       </div>
       <div class="field">
         <label for="pub_date">Data de publicação</label>
-        <input type="date" id="pub_date" name="pub_date" value={today} />
+        <input type="date" id="pub_date" name="pub_date" value={initialDate} />
       </div>
     </div>
 
     <div class="field full">
-      <label for="content">Conteúdo * <span class="hint">Markdown</span></label>
-      <textarea id="content" name="content" required rows="20" placeholder="## Introdução&#10;&#10;Escreva aqui em Markdown..."></textarea>
+      <label for="content">Conteúdo *</label>
+      <div id="monaco-container"></div>
+      <textarea id="content" name="content" style="display:none">{saved.content}</textarea>
     </div>
 
     <div class="footer">
       <label class="toggle-pub">
-        <input type="checkbox" name="published" id="published" />
+        <input type="checkbox" name="published" id="published" checked={saved.published} />
         <span>Publicar agora</span>
       </label>
       <div class="btns">
@@ -86,15 +103,14 @@ const today = new Date().toISOString().slice(0, 10);
   </form>
 </AdminLayout>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
 <script>
-  declare const EasyMDE: any;
-
-  // Auto-gerar slug a partir do título
   const titleInput = document.getElementById('title') as HTMLInputElement | null;
   const slugInput = document.getElementById('slug') as HTMLInputElement | null;
-  let slugEdited = false;
+  const textarea = document.getElementById('content') as HTMLTextAreaElement;
+  const form = document.getElementById('post-form') as HTMLFormElement;
+
+  let slugEdited = !!slugInput?.value;
   slugInput?.addEventListener('input', () => { slugEdited = true; });
   titleInput?.addEventListener('input', () => {
     if (slugEdited || !slugInput) return;
@@ -105,14 +121,43 @@ const today = new Date().toISOString().slice(0, 10);
       .replace(/(^-|-$)/g, '');
   });
 
-  // Editor markdown
-  new EasyMDE({
-    element: document.getElementById('content'),
-    spellChecker: false,
-    autosave: { enabled: true, uniqueId: 'new-post' },
-    toolbar: ['bold','italic','heading','|','quote','unordered-list','ordered-list','|','link','image','code','|','preview','side-by-side','fullscreen','|','guide'],
-    placeholder: 'Escreva o conteúdo em Markdown...',
-    minHeight: '400px',
+  declare const require: any;
+  require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+  require(['vs/editor/editor.main'], function () {
+    declare const monaco: any;
+    const editor = monaco.editor.create(document.getElementById('monaco-container'), {
+      value: textarea.value,
+      language: 'markdown',
+      theme: 'vs-dark',
+      minimap: { enabled: false },
+      wordWrap: 'on',
+      lineNumbers: 'on',
+      fontSize: 14,
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+    });
+
+    editor.onDidChangeModelContent(() => {
+      textarea.value = editor.getValue();
+    });
+
+    form.addEventListener('submit', (e) => {
+      textarea.value = editor.getValue();
+      if (!textarea.value.trim()) {
+        e.preventDefault();
+        const existing = document.querySelector('.error');
+        const msg = 'O conteúdo não pode estar vazio.';
+        if (existing) { existing.textContent = msg; }
+        else {
+          const div = document.createElement('div');
+          div.className = 'error';
+          div.textContent = msg;
+          form.before(div);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
   });
 </script>
 
@@ -151,16 +196,11 @@ const today = new Date().toISOString().slice(0, 10);
     transition: all 0.15s;
   }
   .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
-
-  /* EasyMDE dark theme override */
-  .EasyMDEContainer .CodeMirror {
-    background: var(--surface-2) !important; color: var(--text) !important;
-    border: 1px solid var(--border) !important; border-radius: 0 0 9px 9px !important;
+  #monaco-container {
+    height: 500px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
   }
-  .editor-toolbar { background: var(--surface) !important; border-color: var(--border) !important; border-radius: 9px 9px 0 0 !important; }
-  .editor-toolbar button { color: var(--text-dim) !important; }
-  .editor-toolbar button:hover, .editor-toolbar button.active { background: var(--surface-2) !important; color: var(--text) !important; }
-  .editor-preview { background: var(--bg) !important; color: var(--text) !important; }
-
   @media (max-width: 760px) { .cols { flex-direction: column; } }
 </style>

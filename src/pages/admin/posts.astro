@@ -6,7 +6,6 @@ import type { Post } from '@/types';
 
 const supabase = createClient(Astro.cookies);
 
-// Handle delete
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
   const action = data.get('action');
