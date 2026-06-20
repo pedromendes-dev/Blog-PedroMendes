@@ -1,0 +1,111 @@
+---
+import { createClient } from '@/lib/supabase';
+
+let error = '';
+let mode = Astro.url.searchParams.get('mode') ?? 'login';
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+  const email = data.get('email') as string;
+  const password = data.get('password') as string;
+  const action = data.get('action') as string;
+
+  const supabase = createClient(Astro.cookies);
+
+  if (action === 'register') {
+    const { error: err } = await supabase.auth.signUp({ email, password });
+    if (err) {
+      error = err.message;
+    } else {
+      return Astro.redirect('/admin/posts');
+    }
+  } else {
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) {
+      error = 'Email ou senha incorretos.';
+    } else {
+      return Astro.redirect('/admin/posts');
+    }
+  }
+}
+---
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin · Login</title>
+  <link rel="icon" href="/favicon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0e17; --surface: #111827; --surface-2: #1a2235;
+      --border: #1e2d45; --text: #e8edf5; --text-dim: #8896aa;
+      --accent: #4f8ef7; --accent-strong: #7aaeff;
+    }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
+    }
+    .box {
+      width: 100%; max-width: 400px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem;
+    }
+    .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .logo span { color: var(--accent); }
+    .sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 2rem; }
+
+    .tabs { display: flex; gap: 0.25rem; background: var(--surface-2); border-radius: 9px; padding: 0.25rem; margin-bottom: 1.8rem; }
+    .tab {
+      flex: 1; text-align: center; padding: 0.5rem; border-radius: 7px;
+      font-size: 0.88rem; font-weight: 500; cursor: pointer; text-decoration: none;
+      color: var(--text-dim); transition: all 0.15s;
+    }
+    .tab.active { background: var(--bg); color: var(--text); }
+
+    label { display: block; font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 500; }
+    input[type=email], input[type=password] {
+      width: 100%; padding: 0.7rem 0.9rem; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 9px; color: var(--text);
+      font-size: 0.95rem; outline: none; transition: border-color 0.2s; margin-bottom: 1.1rem;
+    }
+    input:focus { border-color: var(--accent); }
+    .submit {
+      width: 100%; padding: 0.8rem; background: var(--accent); color: #fff;
+      border: none; border-radius: 9px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .submit:hover { opacity: 0.85; }
+    .error {
+      background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3);
+      color: #fc8181; padding: 0.7rem 0.9rem; border-radius: 9px; font-size: 0.88rem;
+      margin-bottom: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">Pedro<span>.</span>blog</div>
+    <p class="sub">Painel de administração</p>
+
+    <div class="tabs">
+      <a href="?mode=login" class:list={['tab', { active: mode !== 'register' }]}>Entrar</a>
+      <a href="?mode=register" class:list={['tab', { active: mode === 'register' }]}>Criar conta</a>
+    </div>
+
+    {error && <div class="error">{error}</div>}
+
+    <form method="post">
+      <input type="hidden" name="action" value={mode === 'register' ? 'register' : 'login'} />
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autocomplete="email" autofocus />
+      <label for="password">Senha</label>
+      <input type="password" id="password" name="password" required minlength="8" />
+      <button type="submit" class="submit">
+        {mode === 'register' ? 'Criar conta' : 'Entrar'}
+      </button>
+    </form>
+  </div>
+</body>
+</html>

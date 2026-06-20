@@ -1,37 +1,54 @@
 ---
-import { getCollection } from 'astro:content';
 import readingTime from 'reading-time';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import PostCard from '@/components/PostCard.astro';
 import Icon from '@/components/Icon.astro';
+import { createClient } from '@/lib/supabase';
+import type { Post } from '@/types';
 
-const posts = (await getCollection('blog', ({ data }) => !data.draft))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const minutesOf = (body: string) => Math.max(1, Math.round(readingTime(body ?? '').minutes));
-const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const q = Astro.url.searchParams.get('q')?.trim() ?? '';
+const supabase = createClient(Astro.cookies);
+
+let query = supabase
+  .from('posts')
+  .select('*')
+  .eq('published', true)
+  .order('pub_date', { ascending: false });
+
+if (q) {
+  query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+}
+
+const { data } = await query;
+const posts = (data ?? []) as Post[];
+const minutesOf = (content: string) => Math.max(1, Math.round(readingTime(content).minutes));
 ---
 <BaseLayout title="Blog" description="Artigos sobre desenvolvimento, arquitetura e engenharia de software.">
   <section class="top">
-    <p class="eyebrow">{posts.length} artigo{posts.length === 1 ? '' : 's'}</p>
+    <p class="eyebrow">{posts.length} artigo{posts.length === 1 ? '' : 's'}{q ? ` para "${q}"` : ''}</p>
     <h1>Blog</h1>
     <p class="sub">Notas técnicas, decisões de arquitetura e o que aprendo construindo software.</p>
 
-    <div class="searchbox">
+    <form class="searchbox" method="get">
       <Icon name="search" size={18} />
-      <input id="q" type="search" placeholder="Buscar artigos..." autocomplete="off" aria-label="Buscar artigos" />
-    </div>
-    <div id="search-results" class="results" hidden></div>
+      <input name="q" type="search" value={q} placeholder="Buscar artigos..." autocomplete="off" aria-label="Buscar artigos" />
+    </form>
   </section>
 
-  <section id="list" class="grid">
+  <section class="grid">
+    {posts.length === 0 && (
+      <p class="empty">
+        {q ? `Nenhum resultado para "${q}".` : 'Ainda não há posts publicados.'}
+      </p>
+    )}
     {posts.map((p) => (
       <PostCard
-        id={p.id}
-        title={p.data.title}
-        description={p.data.description}
-        pubDate={p.data.pubDate}
-        tags={p.data.tags}
-        minutes={minutesOf(p.body ?? '')}
+        slug={p.slug}
+        title={p.title}
+        description={p.description}
+        pubDate={new Date(p.pub_date)}
+        tags={p.tags}
+        minutes={minutesOf(p.content)}
       />
     ))}
   </section>
@@ -47,43 +64,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     }
     .searchbox:focus-within { border-color: var(--accent); }
     .searchbox input { flex: 1; background: none; border: none; color: var(--text); font-size: 1rem; outline: none; }
-    .results { margin-top: 1rem; }
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.3rem; padding: 1.5rem 0 2rem; }
+    .empty { color: var(--text-dim); grid-column: 1 / -1; }
     @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
   </style>
-
-  <link rel="stylesheet" href={`${base}/pagefind/pagefind-ui.css`} />
-  <script is:inline define:vars={{ base }}>
-    window.addEventListener('DOMContentLoaded', () => {
-      const input = document.getElementById('q');
-      const results = document.getElementById('search-results');
-      const list = document.getElementById('list');
-      let pf;
-      const load = async () => {
-        if (pf) return pf;
-        try {
-          pf = await import(`${base}/pagefind/pagefind.js`);
-          await pf.init();
-        } catch { pf = null; }
-        return pf;
-      };
-      let timer;
-      input?.addEventListener('input', (e) => {
-        clearTimeout(timer);
-        const term = e.target.value.trim();
-        timer = setTimeout(async () => {
-          if (!term) { results.hidden = true; results.innerHTML = ''; list.style.display = ''; return; }
-          const api = await load();
-          if (!api) { results.hidden = false; results.innerHTML = '<p style="color:var(--text-dim)">Busca disponível após o deploy (índice gerado no build).</p>'; return; }
-          const search = await api.search(term);
-          const data = await Promise.all(search.results.slice(0, 8).map((r) => r.data()));
-          list.style.display = 'none';
-          results.hidden = false;
-          results.innerHTML = data.length
-            ? data.map((d) => `<a href="${d.url}" style="display:block;padding:1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:0.7rem;color:var(--text)"><strong style="font-family:var(--font-display)">${d.meta.title || 'Sem título'}</strong><p style="color:var(--text-dim);font-size:0.9rem;margin-top:0.3rem">${d.excerpt}</p></a>`).join('')
-            : `<p style="color:var(--text-dim)">Nada encontrado para "${term}".</p>`;
-        }, 200);
-      });
-    });
-  </script>
 </BaseLayout>

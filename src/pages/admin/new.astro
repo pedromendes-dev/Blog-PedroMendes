@@ -1,0 +1,166 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import { createClient } from '@/lib/supabase';
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const data = await Astro.request.formData();
+  const title = (data.get('title') as string).trim();
+  const slug = (data.get('slug') as string).trim();
+  const description = (data.get('description') as string).trim();
+  const content = (data.get('content') as string).trim();
+  const tagsRaw = (data.get('tags') as string).trim();
+  const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
+  const published = data.get('published') === 'on';
+  const pub_date = (data.get('pub_date') as string) || new Date().toISOString().slice(0, 10);
+
+  const supabase = createClient(Astro.cookies);
+  const { error: err } = await supabase.from('posts').insert({
+    title, slug, description, content, tags, published,
+    pub_date: new Date(pub_date).toISOString(),
+  });
+
+  if (err) {
+    error = err.message.includes('unique') ? 'Este slug já existe. Escolha outro.' : err.message;
+  } else {
+    return Astro.redirect('/admin/posts');
+  }
+}
+
+const today = new Date().toISOString().slice(0, 10);
+---
+<AdminLayout title="Novo post">
+  <div class="page-header">
+    <h1 class="page-title">Novo post</h1>
+    <a href="/admin/posts" class="back-link">← Voltar</a>
+  </div>
+
+  {error && <div class="error">{error}</div>}
+
+  <form method="post" class="post-form">
+    <div class="row">
+      <div class="field full">
+        <label for="title">Título *</label>
+        <input type="text" id="title" name="title" required placeholder="Título do post" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field full">
+        <label for="slug">Slug * <span class="hint">URL amigável (ex: meu-primeiro-post)</span></label>
+        <input type="text" id="slug" name="slug" required placeholder="meu-primeiro-post" pattern="[a-z0-9-]+" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field full">
+        <label for="description">Descrição * <span class="hint">Aparece nos cards e no SEO</span></label>
+        <textarea id="description" name="description" required rows="2" placeholder="Resumo do post..."></textarea>
+      </div>
+    </div>
+    <div class="row cols">
+      <div class="field">
+        <label for="tags">Tags <span class="hint">Separadas por vírgula</span></label>
+        <input type="text" id="tags" name="tags" placeholder="dotnet, arquitetura, csharp" />
+      </div>
+      <div class="field">
+        <label for="pub_date">Data de publicação</label>
+        <input type="date" id="pub_date" name="pub_date" value={today} />
+      </div>
+    </div>
+
+    <div class="field full">
+      <label for="content">Conteúdo * <span class="hint">Markdown</span></label>
+      <textarea id="content" name="content" required rows="20" placeholder="## Introdução&#10;&#10;Escreva aqui em Markdown..."></textarea>
+    </div>
+
+    <div class="footer">
+      <label class="toggle-pub">
+        <input type="checkbox" name="published" id="published" />
+        <span>Publicar agora</span>
+      </label>
+      <div class="btns">
+        <a href="/admin/posts" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-primary">Salvar post</button>
+      </div>
+    </div>
+  </form>
+</AdminLayout>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script>
+  declare const EasyMDE: any;
+
+  // Auto-gerar slug a partir do título
+  const titleInput = document.getElementById('title') as HTMLInputElement | null;
+  const slugInput = document.getElementById('slug') as HTMLInputElement | null;
+  let slugEdited = false;
+  slugInput?.addEventListener('input', () => { slugEdited = true; });
+  titleInput?.addEventListener('input', () => {
+    if (slugEdited || !slugInput) return;
+    slugInput.value = titleInput.value
+      .toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  });
+
+  // Editor markdown
+  new EasyMDE({
+    element: document.getElementById('content'),
+    spellChecker: false,
+    autosave: { enabled: true, uniqueId: 'new-post' },
+    toolbar: ['bold','italic','heading','|','quote','unordered-list','ordered-list','|','link','image','code','|','preview','side-by-side','fullscreen','|','guide'],
+    placeholder: 'Escreva o conteúdo em Markdown...',
+    minHeight: '400px',
+  });
+</script>
+
+<style>
+  .back-link { color: var(--text-dim); font-size: 0.9rem; }
+  .back-link:hover { color: var(--accent); }
+  .error {
+    background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3);
+    color: #fc8181; padding: 0.8rem 1rem; border-radius: 9px; margin-bottom: 1.5rem;
+  }
+  .post-form { display: flex; flex-direction: column; gap: 1.2rem; }
+  .row { display: flex; gap: 1rem; }
+  .cols { gap: 1.5rem; }
+  .field { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+  .full { flex: 1; }
+  label { font-size: 0.82rem; color: var(--text-dim); font-weight: 500; }
+  .hint { font-weight: 400; opacity: 0.6; }
+  input[type=text], input[type=date], textarea {
+    padding: 0.7rem 0.9rem; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 9px; color: var(--text);
+    font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+    font-family: inherit; width: 100%;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; }
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 1rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 1rem;
+  }
+  .toggle-pub { display: flex; align-items: center; gap: 0.6rem; cursor: pointer; color: var(--text-dim); font-size: 0.9rem; }
+  .toggle-pub input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+  .btns { display: flex; gap: 0.75rem; }
+  .btn-cancel {
+    padding: 0.65rem 1.2rem; border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text-dim); font-size: 0.9rem; text-decoration: none;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* EasyMDE dark theme override */
+  .EasyMDEContainer .CodeMirror {
+    background: var(--surface-2) !important; color: var(--text) !important;
+    border: 1px solid var(--border) !important; border-radius: 0 0 9px 9px !important;
+  }
+  .editor-toolbar { background: var(--surface) !important; border-color: var(--border) !important; border-radius: 9px 9px 0 0 !important; }
+  .editor-toolbar button { color: var(--text-dim) !important; }
+  .editor-toolbar button:hover, .editor-toolbar button.active { background: var(--surface-2) !important; color: var(--text) !important; }
+  .editor-preview { background: var(--bg) !important; color: var(--text) !important; }
+
+  @media (max-width: 760px) { .cols { flex-direction: column; } }
+</style>

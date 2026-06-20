@@ -3,7 +3,7 @@ import { href, formatDate } from '@/utils';
 import Icon from './Icon.astro';
 
 interface Props {
-  id: string;
+  slug: string;
   title: string;
   description: string;
   pubDate: Date;
@@ -11,10 +11,10 @@ interface Props {
   minutes: number;
   featured?: boolean;
 }
-const { id, title, description, pubDate, tags, minutes, featured = false } = Astro.props;
+const { slug, title, description, pubDate, tags, minutes, featured = false } = Astro.props;
 ---
 <article class:list={['card', { feat: featured }]}>
-  <a href={href(`/blog/${id}`)} class="cover-link" aria-label={title}>
+  <a href={href(`/blog/${slug}`)} class="cover-link" aria-label={title}>
     <div class="meta mono">
       <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
       <span class="dot">·</span>

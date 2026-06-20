@@ -1,43 +1,34 @@
 ---
-import type { CollectionEntry } from 'astro:content';
 import BaseLayout from './BaseLayout.astro';
 import TableOfContents from '@/components/TableOfContents.astro';
 import Giscus from '@/components/Giscus.astro';
 import Icon from '@/components/Icon.astro';
 import { href, formatDate } from '@/utils';
-import { Image } from 'astro:assets';
+import type { Post } from '@/types';
 
 interface Props {
-  post: CollectionEntry<'blog'>;
+  post: Post;
   minutes: number;
   headings: { depth: number; slug: string; text: string }[];
 }
 const { post, minutes, headings } = Astro.props;
-const { title, description, pubDate, updatedDate, tags, cover, coverAlt } = post.data;
 ---
-<BaseLayout title={title} description={description} image="/og-default.png" article publishedTime={pubDate}>
+<BaseLayout title={post.title} description={post.description} image="/og-default.png" article publishedTime={new Date(post.pub_date)}>
   <article class="post">
     <header class="head">
       <a href={href('/blog')} class="back mono"><Icon name="arrow" size={14} /> voltar ao blog</a>
       <div class="meta mono">
-        <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+        <time datetime={new Date(post.pub_date).toISOString()}>{formatDate(new Date(post.pub_date))}</time>
         <span class="dot">·</span>
         <span class="rt"><Icon name="clock" size={13} /> {minutes} min de leitura</span>
-        {updatedDate && <span class="dot">·</span>}
-        {updatedDate && <span>atualizado {formatDate(updatedDate)}</span>}
       </div>
-      <h1>{title}</h1>
-      <p class="lead">{description}</p>
+      <h1>{post.title}</h1>
+      <p class="lead">{post.description}</p>
       <div class="tags">
-        {tags.map((t) => (
+        {post.tags.map((t) => (
           <a href={href(`/tags/${t}`)} class="tg mono">#{t}</a>
         ))}
       </div>
-      {cover && (
-        <div class="cover">
-          <Image src={cover} alt={coverAlt ?? title} widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 800px" />
-        </div>
-      )}
     </header>
 
     <div class="grid">
@@ -66,8 +57,6 @@ const { title, description, pubDate, updatedDate, tags, cover, coverAlt } = post
     .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }
     .tg { font-size: 0.78rem; color: var(--warm); padding: 0.2rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
     .tg:hover { border-color: var(--warm); }
-    .cover { margin-top: 2rem; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
-    .cover :global(img) { width: 100%; height: auto; display: block; }
     .grid { display: grid; grid-template-columns: minmax(0, 1fr) 16rem; gap: 3rem; margin-top: 2.5rem; align-items: start; }
     @media (max-width: 1024px) {
       .grid { grid-template-columns: 1fr; }
