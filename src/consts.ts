@@ -36,11 +36,11 @@ export const SOCIALS = {
 //   3. Configure em https://giscus.app e copie os 4 valores abaixo
 //   4. Mantenha ENABLED em true
 export const GISCUS = {
-  enabled: false, // troque para true depois de configurar
-  repo: 'pedromendes-dev/blog',
-  repoId: 'PREENCHA_AQUI',
+  enabled: true,
+  repo: 'pedromendes-dev/Blog-PedroMendes',
+  repoId: 'R_kgDOS_uSzQ',
   category: 'Announcements',
-  categoryId: 'PREENCHA_AQUI',
+  categoryId: 'DIC_kwDOS_uSzc4C_gaj',
 } as const;
 
 /** Itens do menu de navegação. href é relativo à raiz do site. */
