@@ -2,30 +2,19 @@
 import { createClient } from '@/lib/supabase';
 
 let error = '';
-let mode = Astro.url.searchParams.get('mode') ?? 'login';
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
   const email = data.get('email') as string;
   const password = data.get('password') as string;
-  const action = data.get('action') as string;
 
   const supabase = createClient(Astro.cookies);
+  const { error: err } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (action === 'register') {
-    const { error: err } = await supabase.auth.signUp({ email, password });
-    if (err) {
-      error = err.message;
-    } else {
-      return Astro.redirect('/admin/posts');
-    }
+  if (err) {
+    error = 'Email ou senha incorretos.';
   } else {
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) {
-      error = 'Email ou senha incorretos.';
-    } else {
-      return Astro.redirect('/admin/posts');
-    }
+    return Astro.redirect('/admin/posts');
   }
 }
 ---
@@ -42,27 +31,19 @@ if (Astro.request.method === 'POST') {
     :root {
       --bg: #0a0e17; --surface: #111827; --surface-2: #1a2235;
       --border: #1e2d45; --text: #e8edf5; --text-dim: #8896aa;
-      --accent: #4f8ef7; --accent-strong: #7aaeff;
+      --accent: #4f8ef7;
     }
     body {
       background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif;
       min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;
     }
     .box {
-      width: 100%; max-width: 400px; background: var(--surface);
+      width: 100%; max-width: 380px; background: var(--surface);
       border: 1px solid var(--border); border-radius: 16px; padding: 2.5rem;
     }
-    .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.4rem; }
+    .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.3rem; }
     .logo span { color: var(--accent); }
-    .sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 2rem; }
-
-    .tabs { display: flex; gap: 0.25rem; background: var(--surface-2); border-radius: 9px; padding: 0.25rem; margin-bottom: 1.8rem; }
-    .tab {
-      flex: 1; text-align: center; padding: 0.5rem; border-radius: 7px;
-      font-size: 0.88rem; font-weight: 500; cursor: pointer; text-decoration: none;
-      color: var(--text-dim); transition: all 0.15s;
-    }
-    .tab.active { background: var(--bg); color: var(--text); }
+    .sub { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 2rem; }
 
     label { display: block; font-size: 0.82rem; color: var(--text-dim); margin-bottom: 0.4rem; font-weight: 500; }
     input[type=email], input[type=password] {
@@ -74,7 +55,7 @@ if (Astro.request.method === 'POST') {
     .submit {
       width: 100%; padding: 0.8rem; background: var(--accent); color: #fff;
       border: none; border-radius: 9px; font-size: 1rem; font-weight: 600;
-      cursor: pointer; transition: opacity 0.15s;
+      cursor: pointer; transition: opacity 0.15s; margin-top: 0.3rem;
     }
     .submit:hover { opacity: 0.85; }
     .error {
@@ -87,24 +68,16 @@ if (Astro.request.method === 'POST') {
 <body>
   <div class="box">
     <div class="logo">Pedro<span>.</span>blog</div>
-    <p class="sub">Painel de administração</p>
-
-    <div class="tabs">
-      <a href="?mode=login" class:list={['tab', { active: mode !== 'register' }]}>Entrar</a>
-      <a href="?mode=register" class:list={['tab', { active: mode === 'register' }]}>Criar conta</a>
-    </div>
+    <p class="sub">Acesso restrito</p>
 
     {error && <div class="error">{error}</div>}
 
     <form method="post">
-      <input type="hidden" name="action" value={mode === 'register' ? 'register' : 'login'} />
       <label for="email">Email</label>
       <input type="email" id="email" name="email" required autocomplete="email" autofocus />
       <label for="password">Senha</label>
-      <input type="password" id="password" name="password" required minlength="8" />
-      <button type="submit" class="submit">
-        {mode === 'register' ? 'Criar conta' : 'Entrar'}
-      </button>
+      <input type="password" id="password" name="password" required />
+      <button type="submit" class="submit">Entrar</button>
     </form>
   </div>
 </body>
