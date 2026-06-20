@@ -15,7 +15,9 @@
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "astro": "^6.4.8",
+    "highlight.js": "^11.11.1",
     "marked": "^18.0.5",
+    "marked-highlight": "^2.2.4",
     "reading-time": "^1.5.0"
   },
   "devDependencies": {

@@ -16,3 +16,7 @@ node_modules/
 .idea/
 .env
 .vercel
+.history
+
+# nested clone — não faz parte do projeto
+/blog/

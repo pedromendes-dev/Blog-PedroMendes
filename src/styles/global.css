@@ -132,6 +132,32 @@ a:hover { color: var(--warm); }
   background-color: var(--shiki-light-bg) !important;
 }
 
+/* ───────────────── SYNTAX HIGHLIGHT (highlight.js) ───────────────── */
+/* Tema escuro – Atom One Dark */
+.hljs { display: block; overflow-x: auto; background: var(--code-bg) !important; color: #abb2bf; font-family: var(--font-mono); font-size: 0.9rem; }
+.hljs-comment, .hljs-quote { color: #5c6370; font-style: italic; }
+.hljs-doctag, .hljs-keyword, .hljs-formula { color: #c678dd; }
+.hljs-section, .hljs-name, .hljs-selector-tag, .hljs-deletion, .hljs-subst { color: #e06c75; }
+.hljs-literal { color: #56b6c2; }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta .hljs-string { color: #98c379; }
+.hljs-attr, .hljs-variable, .hljs-template-variable, .hljs-type, .hljs-selector-class, .hljs-selector-attr, .hljs-selector-pseudo, .hljs-number { color: #d19a66; }
+.hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta, .hljs-selector-id, .hljs-title { color: #61afef; }
+.hljs-built_in, .hljs-title.class_, .hljs-class .hljs-title { color: #e6c07b; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }
+.hljs-link { text-decoration: underline; }
+
+/* Tema claro – Atom One Light */
+:root.light .hljs { background: var(--code-bg) !important; color: #383a42; }
+:root.light .hljs-comment, :root.light .hljs-quote { color: #a0a1a7; font-style: italic; }
+:root.light .hljs-doctag, :root.light .hljs-keyword, :root.light .hljs-formula { color: #a626a4; }
+:root.light .hljs-section, :root.light .hljs-name, :root.light .hljs-selector-tag, :root.light .hljs-deletion, :root.light .hljs-subst { color: #e45649; }
+:root.light .hljs-literal { color: #0184bc; }
+:root.light .hljs-string, :root.light .hljs-regexp, :root.light .hljs-addition, :root.light .hljs-attribute, :root.light .hljs-meta :root.light .hljs-string { color: #50a14f; }
+:root.light .hljs-attr, :root.light .hljs-variable, :root.light .hljs-template-variable, :root.light .hljs-type, :root.light .hljs-selector-class, :root.light .hljs-selector-attr, :root.light .hljs-selector-pseudo, :root.light .hljs-number { color: #986801; }
+:root.light .hljs-symbol, :root.light .hljs-bullet, :root.light .hljs-link, :root.light .hljs-meta, :root.light .hljs-selector-id, :root.light .hljs-title { color: #4078f2; }
+:root.light .hljs-built_in, :root.light .hljs-title.class_, :root.light .hljs-class :root.light .hljs-title { color: #c18401; }
+
 /* Animação de entrada suave (respeita reduced-motion acima) */
 @keyframes rise {
   from { opacity: 0; transform: translateY(12px); }
