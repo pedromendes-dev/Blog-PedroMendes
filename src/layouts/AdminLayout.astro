@@ -7,6 +7,9 @@ interface Props {
 const { title = 'Admin' } = Astro.props;
 const supabase = createClient(Astro.cookies);
 const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) return Astro.redirect('/admin/login');
+
 const path = Astro.url.pathname;
 ---
 <!doctype html>
@@ -21,7 +24,7 @@ const path = Astro.url.pathname;
     :root {
       --bg: #0a0e17; --surface: #111827; --surface-2: #1a2235;
       --border: #1e2d45; --text: #e8edf5; --text-dim: #8896aa;
-      --accent: #4f8ef7; --warm: #f0a84a;
+      --accent: #4f8ef7; --warm: #f0a84a; --danger: #e53e3e;
       --font: 'Inter', system-ui, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, monospace;
     }
@@ -53,7 +56,7 @@ const path = Astro.url.pathname;
       border-radius: 8px; background: transparent; color: var(--text-dim);
       font-size: 0.85rem; cursor: pointer; transition: all 0.15s; text-align: left;
     }
-    .logout-btn:hover { border-color: #e53e3e; color: #e53e3e; }
+    .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
 
     .main { flex: 1; padding: 2rem 2.5rem; max-width: 960px; }
     .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
@@ -87,7 +90,7 @@ const path = Astro.url.pathname;
       <a href="/" target="_blank">🔗 Ver blog</a>
     </nav>
     <div class="user-area">
-      <p class="email">{user?.email}</p>
+      <p class="email">{user.email}</p>
       <form method="post" action="/admin/logout">
         <button type="submit" class="logout-btn">Sair →</button>
       </form>
